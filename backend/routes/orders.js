@@ -14,6 +14,12 @@ const router = express.Router();
 router.post("/", authMiddleware, roleAuth(["customer"]), createOrder);
 router.get("/", authMiddleware, roleAuth(["customer"]), getUserOrders);
 router.get("/:id", authMiddleware, roleAuth(["customer"]), getOrderById);
+router.put(
+  "/:id/cancel",
+  authMiddleware,
+  roleAuth(["customer"]),
+  require("../controllers/orderController").cancelOrder
+);
 
 // Florist/Admin routes
 router.put(
