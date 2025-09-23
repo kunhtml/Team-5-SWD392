@@ -70,6 +70,9 @@ const AdminDashboard = () => {
       <Typography variant="h4" gutterBottom>
         Admin Dashboard
       </Typography>
+      <Box sx={{ mb: 2 }}>
+        <Button variant="contained" onClick={() => navigate("/admin/posts")}>Quản lý bài đăng</Button>
+      </Box>
 
       <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 4 }}>
         <Tab label="Người Dùng" />
