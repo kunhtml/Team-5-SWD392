@@ -118,7 +118,10 @@ const getUserOrders = async (req, res) => {
     const { page = 1, limit = 10, status } = req.query;
     const offset = (page - 1) * limit;
 
-    const where = { user_id: req.user.id };
+    const where = {};
+    if (req.user.role !== "admin") {
+      where.user_id = req.user.id;
+    }
     if (status) where.status = status;
 
     const { count, rows } = await Order.findAndCountAll({
@@ -157,9 +160,8 @@ const getUserOrders = async (req, res) => {
 const getOrderById = async (req, res) => {
   try {
     const order = await Order.findByPk(req.params.id, {
-      where: { user_id: req.user.id }, // Only own orders
       include: [
-        { model: Shop, as: "shop", attributes: ["id", "name"] },
+        { model: Shop, as: "shop", attributes: ["id", "name", "florist_id"] },
         {
           model: OrderItem,
           as: "items",
@@ -176,6 +178,14 @@ const getOrderById = async (req, res) => {
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Authorization: customer can only view own order; florist only own shop; admin allowed
+    if (req.user.role === "customer" && order.user_id !== req.user.id) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    if (req.user.role === "florist" && order.shop && order.shop.florist_id !== req.user.id) {
+      return res.status(403).json({ message: "Access denied" });
     }
 
     res.json({ order });
@@ -347,6 +357,33 @@ const cancelOrder = async (req, res) => {
   }
 };
 
+// Customer updates shipping address for own order if not yet finalized
+const updateShippingAddress = async (req, res) => {
+  try {
+    const { shipping_address } = req.body;
+    if (!shipping_address || String(shipping_address).trim().length < 5) {
+      return res.status(400).json({ message: "Địa chỉ giao hàng không hợp lệ" });
+    }
+
+    const order = await Order.findByPk(req.params.id);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (order.user_id !== req.user.id) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    // Allow edit when pending or processing only
+    if (!["pending", "processing"].includes(order.status)) {
+      return res.status(400).json({ message: "Không thể sửa địa chỉ khi đơn đã xử lý xa hơn" });
+    }
+
+    await order.update({ shipping_address });
+    res.json({ message: "Cập nhật địa chỉ giao hàng thành công", order });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   createOrder,
   getUserOrders,
@@ -354,4 +391,5 @@ module.exports = {
   updateOrderStatus,
   getShopOrders,
   cancelOrder,
+  updateShippingAddress,
 };
