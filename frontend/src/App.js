@@ -16,7 +16,9 @@ import Orders from "./pages/Orders";
 import ShopRequest from "./pages/ShopRequest";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminPosts from "./pages/AdminPosts";
 import FloristDashboard from "./pages/FloristDashboard";
+import FloristProducts from "./pages/FloristProducts";
 import AdminUserEdit from "./pages/AdminUserEdit";
 import ShopDetail from "./pages/ShopDetail";
 import WalletBalance from "./pages/WalletBalance";
@@ -105,6 +107,14 @@ function App() {
           }
         />
         <Route
+          path="/admin/posts"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <AdminPosts />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/users/:id"
           element={
             <ProtectedRoute roles={["admin"]}>
@@ -117,6 +127,14 @@ function App() {
           element={
             <ProtectedRoute roles={["florist"]}>
               <FloristDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/florist/products"
+          element={
+            <ProtectedRoute roles={["florist", "admin"]}>
+              <FloristProducts />
             </ProtectedRoute>
           }
         />
