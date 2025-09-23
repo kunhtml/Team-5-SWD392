@@ -1,5 +1,5 @@
-import React from "react";
-import { useSelector } from "react-redux";
+import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Box,
   Typography,
@@ -8,11 +8,21 @@ import {
   CardContent,
   Chip,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import api from "../services/api";
+import { fetchUserFromToken } from "../store/slices/authSlice";
 
 const Dashboard = () => {
+  const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const [editOpen, setEditOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", phone: "", address: "", avatar_url: "" });
   const navigate = useNavigate();
 
   if (!user) {
@@ -63,6 +73,23 @@ const Dashboard = () => {
                 <Typography>
                   Xem đơn hàng, ví tiền, yêu cầu mở cửa hàng
                 </Typography>
+                <Box sx={{ mt: 2 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      setForm({
+                        name: user.name || "",
+                        phone: user.phone || "",
+                        address: user.address || "",
+                        avatar_url: user.avatar_url || "",
+                      });
+                      setEditOpen(true);
+                    }}
+                  >
+                    Chỉnh sửa thông tin
+                  </Button>
+                </Box>
               </CardContent>
             </Card>
           </Grid>
@@ -73,6 +100,7 @@ const Dashboard = () => {
   };
 
   return (
+    <>
     <Box sx={{ mt: 4 }}>
       <Typography variant="h4" gutterBottom>
         Chào {user.name}! ({user.role})
@@ -124,7 +152,61 @@ const Dashboard = () => {
           </Card>
         </Grid>
       </Grid>
-    </Box>
+  </Box>
+  <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="sm" fullWidth>
+      <DialogTitle>Chỉnh sửa thông tin cá nhân</DialogTitle>
+      <DialogContent dividers>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+          <TextField
+            label="Họ và tên"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            required
+          />
+          <TextField
+            label="Số điện thoại"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          />
+          <TextField
+            label="Địa chỉ"
+            value={form.address}
+            onChange={(e) => setForm({ ...form, address: e.target.value })}
+            multiline
+            minRows={2}
+          />
+          <TextField
+            label="Avatar URL"
+            value={form.avatar_url}
+            onChange={(e) => setForm({ ...form, avatar_url: e.target.value })}
+            placeholder="https://..."
+          />
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setEditOpen(false)}>Hủy</Button>
+        <Button
+          variant="contained"
+          onClick={async () => {
+            try {
+              if (!form.name.trim()) {
+                window.alert("Tên là bắt buộc");
+                return;
+              }
+              await api.put("/users/profile", form);
+              await dispatch(fetchUserFromToken());
+              setEditOpen(false);
+            } catch (e) {
+              console.error("Cập nhật thông tin thất bại:", e);
+              window.alert("Không thể cập nhật. Vui lòng thử lại.");
+            }
+          }}
+        >
+          Lưu
+        </Button>
+      </DialogActions>
+    </Dialog>
+    </>
   );
 };
 
