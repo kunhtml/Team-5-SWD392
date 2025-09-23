@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import api from "../services/api";
 import {
@@ -21,6 +21,20 @@ const ShopRequest = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [existing, setExisting] = useState(null);
+
+  useEffect(() => {
+    // Fetch current user's latest request to determine if pending
+    const fetchMyRequest = async () => {
+      try {
+        const res = await api.get("/shops/request/my");
+        setExisting(res.data?.request || null);
+      } catch (e) {
+        // ignore if 404 or no request
+      }
+    };
+    fetchMyRequest();
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -35,6 +49,7 @@ const ShopRequest = () => {
     try {
       const response = await api.post("/shops/request", formData);
       setSuccess(true);
+      setExisting(response.data?.request || { status: "pending" });
       setFormData({
         // Reset form
         shop_name: "",
@@ -50,13 +65,21 @@ const ShopRequest = () => {
     }
   };
 
-  if (success) {
+  const isPending = existing && existing.status === "pending";
+
+  if (success || isPending) {
     return (
       <Container maxWidth="sm" sx={{ mt: 8 }}>
-        <Alert severity="success">
-          Yêu cầu mở cửa hàng đã được gửi thành công! Admin sẽ xem xét trong
-          thời gian sớm.
-        </Alert>
+        {isPending ? (
+          <Alert severity="info">
+            Bạn đã gửi yêu cầu mở cửa hàng và đơn đang được xử lý.
+          </Alert>
+        ) : (
+          <Alert severity="success">
+            Yêu cầu mở cửa hàng đã được gửi thành công! Admin sẽ xem xét trong
+            thời gian sớm.
+          </Alert>
+        )}
         <Button variant="contained" href="/dashboard" sx={{ mt: 2 }}>
           Quay Lại Dashboard
         </Button>
@@ -86,6 +109,7 @@ const ShopRequest = () => {
             onChange={handleChange}
             required
             sx={{ mb: 2 }}
+            disabled={loading || isPending}
           />
           <TextField
             fullWidth
@@ -97,6 +121,7 @@ const ShopRequest = () => {
             rows={4}
             required
             sx={{ mb: 2 }}
+            disabled={loading || isPending}
           />
           <TextField
             fullWidth
@@ -106,6 +131,7 @@ const ShopRequest = () => {
             onChange={handleChange}
             required
             sx={{ mb: 2 }}
+            disabled={loading || isPending}
           />
           <TextField
             fullWidth
@@ -115,6 +141,7 @@ const ShopRequest = () => {
             onChange={handleChange}
             required
             sx={{ mb: 2 }}
+            disabled={loading || isPending}
           />
           <TextField
             fullWidth
@@ -125,8 +152,8 @@ const ShopRequest = () => {
             onChange={handleChange}
             required
             sx={{ mb: 3 }}
+            disabled={loading || isPending}
           />
-          {/* Note: File upload for business_license would use input type="file" and FormData */}
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             * Giấy phép kinh doanh (PDF/Image) sẽ được upload trong phiên bản
             đầy đủ
@@ -136,7 +163,7 @@ const ShopRequest = () => {
             fullWidth
             variant="contained"
             type="submit"
-            disabled={loading}
+            disabled={loading || isPending}
           >
             {loading ? "Đang Gửi..." : "Gửi Yêu Cầu"}
           </Button>
