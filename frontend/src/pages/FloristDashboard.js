@@ -205,6 +205,9 @@ const FloristDashboard = () => {
           <Typography>
             Đánh Giá: {shop.average_rating}/5 ({shop.total_reviews} reviews)
           </Typography>
+          {!!shop.email && <Typography>Email: {shop.email}</Typography>}
+          {!!shop.phone && <Typography>Số điện thoại: {shop.phone}</Typography>}
+          {!!shop.address && <Typography>Địa chỉ: {shop.address}</Typography>}
           <Box sx={{ mt: 2 }}>
             <Button
               size="small"
