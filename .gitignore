@@ -54,7 +54,7 @@ Thumbs.db
 backend/uploads/
 
 # Database dumps
-*.sql
+
 *.sqlite
 *.sqlite3
 
