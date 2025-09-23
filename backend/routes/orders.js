@@ -6,14 +6,21 @@ const {
   getOrderById,
   updateOrderStatus,
   getShopOrders,
+  updateShippingAddress,
 } = require("../controllers/orderController");
 
 const router = express.Router();
 
 // Customer routes
 router.post("/", authMiddleware, roleAuth(["customer"]), createOrder);
-router.get("/", authMiddleware, roleAuth(["customer"]), getUserOrders);
-router.get("/:id", authMiddleware, roleAuth(["customer"]), getOrderById);
+router.get("/", authMiddleware, roleAuth(["customer", "florist", "admin"]), getUserOrders);
+router.get("/:id", authMiddleware, roleAuth(["customer", "florist", "admin"]), getOrderById);
+router.put(
+  "/:id/shipping",
+  authMiddleware,
+  roleAuth(["customer"]),
+  updateShippingAddress
+);
 router.put(
   "/:id/cancel",
   authMiddleware,
