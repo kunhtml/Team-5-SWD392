@@ -294,10 +294,64 @@ const getShopOrders = async (req, res) => {
   }
 };
 
+// Customer cancels their own order if eligible
+const cancelOrder = async (req, res) => {
+  try {
+    const order = await Order.findByPk(req.params.id, { include: "shop" });
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    if (order.user_id !== req.user.id) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    // Only allow cancel when pending or processing
+    if (!["pending", "processing"].includes(order.status)) {
+      return res
+        .status(400)
+        .json({ message: "Chỉ có thể hủy đơn ở trạng thái 'pending' hoặc 'processing'" });
+    }
+
+    // Update order status
+    await order.update({ status: "cancelled" });
+
+    // Update shop stats
+    const shop = order.shop;
+    if (shop) {
+      await shop.increment(["cancelled_orders"], { by: 1 });
+      // Optionally decrease pending_orders if you track it strictly
+      // await shop.decrement(["pending_orders"], { by: 1 });
+    }
+
+    // Refund wallet if paid by wallet
+    if (order.payment_status === "paid" && order.payment_method === "wallet") {
+      const wallet = await Wallet.findOne({ where: { user_id: order.user_id } });
+      if (wallet) {
+        const refundAmount = order.total_amount;
+        await wallet.update({ balance: wallet.balance + refundAmount });
+        await WalletTransaction.create({
+          wallet_id: wallet.id,
+          type: "refund",
+          amount: refundAmount,
+          description: `Order refund (cancelled) #${order.id}`,
+          balance_after: wallet.balance,
+          reference_id: `order_${order.id}_refund`,
+        });
+        await order.update({ payment_status: "refunded" });
+      }
+    }
+
+    res.json({ message: "Đã hủy đơn hàng", order });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   createOrder,
   getUserOrders,
   getOrderById,
   updateOrderStatus,
   getShopOrders,
+  cancelOrder,
 };
