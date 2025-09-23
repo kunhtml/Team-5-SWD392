@@ -71,7 +71,9 @@ const AdminDashboard = () => {
         Admin Dashboard
       </Typography>
       <Box sx={{ mb: 2 }}>
-        <Button variant="contained" onClick={() => navigate("/admin/posts")}>Quản lý bài đăng</Button>
+        <Button variant="contained" onClick={() => navigate("/admin/posts")}>
+          Quản lý bài đăng
+        </Button>
       </Box>
 
       <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 4 }}>

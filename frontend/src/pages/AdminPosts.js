@@ -169,7 +169,16 @@ export default function AdminPosts() {
                 <TableCell>{p.id}</TableCell>
                 <TableCell>
                   {p.image_url ? (
-                    <img src={p.image_url} alt={p.name} style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 4 }} />
+                    <img
+                      src={p.image_url}
+                      alt={p.name}
+                      style={{
+                        width: 48,
+                        height: 48,
+                        objectFit: "cover",
+                        borderRadius: 4,
+                      }}
+                    />
                   ) : (
                     "—"
                   )}
@@ -177,26 +186,50 @@ export default function AdminPosts() {
                 <TableCell>{p.name}</TableCell>
                 <TableCell>{p.shop?.name}</TableCell>
                 <TableCell>{p.category?.name}</TableCell>
-                <TableCell>{Number(p.price).toLocaleString("vi-VN")} ₫</TableCell>
+                <TableCell>
+                  {Number(p.price).toLocaleString("vi-VN")} ₫
+                </TableCell>
                 <TableCell>{p.stock}</TableCell>
                 <TableCell>
                   <Stack direction="row" spacing={1}>
-                    <Chip size="small" label={p.moderation_status} color={p.moderation_status === "approved" ? "success" : p.moderation_status === "pending" ? "warning" : "error"} />
+                    <Chip
+                      size="small"
+                      label={p.moderation_status}
+                      color={
+                        p.moderation_status === "approved"
+                          ? "success"
+                          : p.moderation_status === "pending"
+                          ? "warning"
+                          : "error"
+                      }
+                    />
                     <Chip size="small" label={p.status} />
                   </Stack>
                 </TableCell>
                 <TableCell>
                   {p.moderation_status === "pending" ? (
                     <Stack direction="row" spacing={1}>
-                      <Button size="small" variant="contained" color="success" onClick={() => handleModerate(p.id, "approve")}>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="success"
+                        onClick={() => handleModerate(p.id, "approve")}
+                      >
                         Duyệt
                       </Button>
-                      <Button size="small" variant="outlined" color="error" onClick={() => handleModerate(p.id, "reject")}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        onClick={() => handleModerate(p.id, "reject")}
+                      >
                         Từ chối
                       </Button>
                     </Stack>
                   ) : (
-                    <Button size="small" onClick={() => setTab(0)}>Chuyển đến chờ duyệt</Button>
+                    <Button size="small" onClick={() => setTab(0)}>
+                      Chuyển đến chờ duyệt
+                    </Button>
                   )}
                 </TableCell>
               </TableRow>

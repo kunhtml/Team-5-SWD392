@@ -25,7 +25,11 @@ export default function WalletBalance() {
   const [depositAmount, setDepositAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
+  const [toast, setToast] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
   const [qrUrl, setQrUrl] = useState("");
   const [descriptor, setDescriptor] = useState("");
   const [debugOpen, setDebugOpen] = useState(false);
@@ -76,7 +80,12 @@ export default function WalletBalance() {
       </Paper>
 
       {/* Deposit Dialog */}
-      <Dialog open={openDeposit} onClose={() => setOpenDeposit(false)} maxWidth="xs" fullWidth>
+      <Dialog
+        open={openDeposit}
+        onClose={() => setOpenDeposit(false)}
+        maxWidth="xs"
+        fullWidth
+      >
         <DialogTitle>Nạp Tiền Vào Ví</DialogTitle>
         <DialogContent>
           <TextField
@@ -120,13 +129,19 @@ export default function WalletBalance() {
                 setSubmitting(true);
                 const amt = Number(depositAmount);
                 if (!amt || amt <= 0) {
-                  setToast({ open: true, message: "Số tiền không hợp lệ", severity: "error" });
+                  setToast({
+                    open: true,
+                    message: "Số tiền không hợp lệ",
+                    severity: "error",
+                  });
                   setSubmitting(false);
                   return;
                 }
 
                 // Generate descriptor: flowershop+<random>
-                const randomToken = Array.from(crypto.getRandomValues(new Uint8Array(12)))
+                const randomToken = Array.from(
+                  crypto.getRandomValues(new Uint8Array(12))
+                )
                   .map((b) => (b % 36).toString(36))
                   .join("");
                 const desc = `flowershop+${randomToken}`;
@@ -143,7 +158,12 @@ export default function WalletBalance() {
                 const url = `https://qr.sepay.vn/img?${params.toString()}`;
                 setQrUrl(url);
                 // Keep dialog open and show QR below
-                setToast({ open: true, message: "Đã tạo QR nạp tiền. Vui lòng quét và ghi đúng nội dung.", severity: "success" });
+                setToast({
+                  open: true,
+                  message:
+                    "Đã tạo QR nạp tiền. Vui lòng quét và ghi đúng nội dung.",
+                  severity: "success",
+                });
               } catch (e) {
                 setToast({
                   open: true,
@@ -164,16 +184,33 @@ export default function WalletBalance() {
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
               Nội dung chuyển khoản (des):
             </Typography>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-              <TextField fullWidth value={descriptor} InputProps={{ readOnly: true }} />
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{ mb: 2 }}
+            >
+              <TextField
+                fullWidth
+                value={descriptor}
+                InputProps={{ readOnly: true }}
+              />
               <Button
                 variant="outlined"
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(descriptor);
-                    setToast({ open: true, message: "Đã copy nội dung", severity: "success" });
+                    setToast({
+                      open: true,
+                      message: "Đã copy nội dung",
+                      severity: "success",
+                    });
                   } catch (_) {
-                    setToast({ open: true, message: "Không thể copy", severity: "error" });
+                    setToast({
+                      open: true,
+                      message: "Không thể copy",
+                      severity: "error",
+                    });
                   }
                 }}
               >
@@ -181,9 +218,23 @@ export default function WalletBalance() {
               </Button>
             </Stack>
             <Box sx={{ textAlign: "center" }}>
-              <img src={qrUrl} alt="QR nạp tiền" style={{ maxWidth: "100%", borderRadius: 8 }} />
-              <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 2 }}>
-                <Button variant="outlined" onClick={() => window.open(qrUrl, "_blank")}>Mở ảnh QR</Button>
+              <img
+                src={qrUrl}
+                alt="QR nạp tiền"
+                style={{ maxWidth: "100%", borderRadius: 8 }}
+              />
+              <Stack
+                direction="row"
+                spacing={2}
+                justifyContent="center"
+                sx={{ mt: 2 }}
+              >
+                <Button
+                  variant="outlined"
+                  onClick={() => window.open(qrUrl, "_blank")}
+                >
+                  Mở ảnh QR
+                </Button>
                 <Button
                   variant="outlined"
                   color="secondary"
@@ -195,7 +246,12 @@ export default function WalletBalance() {
                       const res = await api.get("/wallet/debug/sepay");
                       setDebugData(res.data);
                     } catch (e) {
-                      setToast({ open: true, message: e.response?.data?.message || "Debug GET thất bại", severity: "error" });
+                      setToast({
+                        open: true,
+                        message:
+                          e.response?.data?.message || "Debug GET thất bại",
+                        severity: "error",
+                      });
                     } finally {
                       setDebugLoading(false);
                     }
@@ -215,9 +271,19 @@ export default function WalletBalance() {
                         amount: amt || undefined,
                       });
                       setBalance(Number(res.data.balance || 0));
-                      setToast({ open: true, message: res.data.message || "Đã xác nhận nạp tiền", severity: "success" });
+                      setToast({
+                        open: true,
+                        message: res.data.message || "Đã xác nhận nạp tiền",
+                        severity: "success",
+                      });
                     } catch (e) {
-                      setToast({ open: true, message: e.response?.data?.message || "Chưa tìm thấy giao dịch phù hợp", severity: "warning" });
+                      setToast({
+                        open: true,
+                        message:
+                          e.response?.data?.message ||
+                          "Chưa tìm thấy giao dịch phù hợp",
+                        severity: "warning",
+                      });
                     } finally {
                       setOpenDeposit(false);
                       setQrUrl("");
@@ -235,7 +301,12 @@ export default function WalletBalance() {
       </Dialog>
 
       {/* Debug Dialog: show full API JSON */}
-      <Dialog open={debugOpen} onClose={() => setDebugOpen(false)} maxWidth="md" fullWidth>
+      <Dialog
+        open={debugOpen}
+        onClose={() => setDebugOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>Sepay Debug Response</DialogTitle>
         <DialogContent dividers>
           {debugLoading ? (
@@ -248,7 +319,8 @@ export default function WalletBalance() {
                 overflow: "auto",
                 whiteSpace: "pre-wrap",
                 wordBreak: "break-word",
-                backgroundColor: (theme) => theme.palette.mode === "dark" ? "#222" : "#f5f5f5",
+                backgroundColor: (theme) =>
+                  theme.palette.mode === "dark" ? "#222" : "#f5f5f5",
                 p: 2,
                 borderRadius: 1,
               }}
@@ -263,17 +335,29 @@ export default function WalletBalance() {
           <Button
             onClick={async () => {
               try {
-                await navigator.clipboard.writeText(JSON.stringify(debugData, null, 2));
-                setToast({ open: true, message: "Đã copy JSON", severity: "success" });
+                await navigator.clipboard.writeText(
+                  JSON.stringify(debugData, null, 2)
+                );
+                setToast({
+                  open: true,
+                  message: "Đã copy JSON",
+                  severity: "success",
+                });
               } catch (_) {
-                setToast({ open: true, message: "Không thể copy", severity: "error" });
+                setToast({
+                  open: true,
+                  message: "Không thể copy",
+                  severity: "error",
+                });
               }
             }}
             disabled={!debugData}
           >
             Copy JSON
           </Button>
-          <Button variant="contained" onClick={() => setDebugOpen(false)}>Đóng</Button>
+          <Button variant="contained" onClick={() => setDebugOpen(false)}>
+            Đóng
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -283,7 +367,10 @@ export default function WalletBalance() {
         onClose={() => setToast((t) => ({ ...t, open: false }))}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert severity={toast.severity} onClose={() => setToast((t) => ({ ...t, open: false }))}>
+        <Alert
+          severity={toast.severity}
+          onClose={() => setToast((t) => ({ ...t, open: false }))}
+        >
           {toast.message}
         </Alert>
       </Snackbar>

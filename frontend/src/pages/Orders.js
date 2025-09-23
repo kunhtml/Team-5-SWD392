@@ -55,7 +55,12 @@ const Orders = () => {
 
   return (
     <Box sx={{ mt: 4 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        sx={{ mb: 2 }}
+      >
         <Typography variant="h4">Đơn Hàng Của Tôi</Typography>
         <TextField
           select
@@ -131,7 +136,8 @@ const Orders = () => {
                     >
                       Chi Tiết
                     </Button>
-                    {(order.status === "pending" || order.status === "processing") && (
+                    {(order.status === "pending" ||
+                      order.status === "processing") && (
                       <Button
                         size="small"
                         color="error"
@@ -160,17 +166,24 @@ const Orders = () => {
       </Stack>
 
       {/* Order details dialog */}
-      <Dialog open={!!selected} onClose={() => setSelected(null)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={!!selected}
+        onClose={() => setSelected(null)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Chi tiết đơn #{selected?.id}</DialogTitle>
         <DialogContent dividers>
           {selected && (
             <Box>
               <Typography>Shop: {selected.shop?.name}</Typography>
               <Typography>
-                Tổng tiền: {parseFloat(selected.total_amount).toLocaleString("vi-VN")} VNĐ
+                Tổng tiền:{" "}
+                {parseFloat(selected.total_amount).toLocaleString("vi-VN")} VNĐ
               </Typography>
               <Typography>Trạng thái: {selected.status}</Typography>
-              {(selected.status === "pending" || selected.status === "processing") ? (
+              {selected.status === "pending" ||
+              selected.status === "processing" ? (
                 <Box sx={{ mt: 2 }}>
                   <TextField
                     label="Địa chỉ giao hàng"
@@ -182,13 +195,16 @@ const Orders = () => {
                   />
                 </Box>
               ) : (
-                <Typography sx={{ mt: 2 }}>Địa chỉ: {selected.shipping_address}</Typography>
+                <Typography sx={{ mt: 2 }}>
+                  Địa chỉ: {selected.shipping_address}
+                </Typography>
               )}
               <Typography sx={{ mt: 2 }}>Sản phẩm:</Typography>
               <ul>
                 {(selected.items || []).map((it) => (
                   <li key={it.id}>
-                    {it.product?.name} x{it.quantity} — {parseFloat(it.price).toLocaleString("vi-VN")} VNĐ
+                    {it.product?.name} x{it.quantity} —{" "}
+                    {parseFloat(it.price).toLocaleString("vi-VN")} VNĐ
                   </li>
                 ))}
               </ul>
@@ -197,22 +213,26 @@ const Orders = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSelected(null)}>Đóng</Button>
-          {selected && (selected.status === "pending" || selected.status === "processing") && (
-            <Button
-              variant="contained"
-              onClick={async () => {
-                try {
-                  await api.put(`/orders/${selected.id}/shipping`, { shipping_address: shipEdit });
-                  setSelected(null);
-                  fetchOrders({ page, status });
-                } catch (e) {
-                  console.error(e);
-                }
-              }}
-            >
-              Lưu địa chỉ
-            </Button>
-          )}
+          {selected &&
+            (selected.status === "pending" ||
+              selected.status === "processing") && (
+              <Button
+                variant="contained"
+                onClick={async () => {
+                  try {
+                    await api.put(`/orders/${selected.id}/shipping`, {
+                      shipping_address: shipEdit,
+                    });
+                    setSelected(null);
+                    fetchOrders({ page, status });
+                  } catch (e) {
+                    console.error(e);
+                  }
+                }}
+              >
+                Lưu địa chỉ
+              </Button>
+            )}
         </DialogActions>
       </Dialog>
     </Box>

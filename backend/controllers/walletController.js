@@ -176,7 +176,8 @@ const getWithdrawalRequests = async (req, res) => {
 // Helper: fetch Sepay transactions list
 function fetchSepayTransactions() {
   return new Promise((resolve, reject) => {
-    const apiKey = process.env.SEPAY_API_KEY || process.env.SEPAY_API_TOKEN || "";
+    const apiKey =
+      process.env.SEPAY_API_KEY || process.env.SEPAY_API_TOKEN || "";
     if (!apiKey) {
       return reject(new Error("Missing SEPAY_API_KEY/SEPAY_API_TOKEN"));
     }
@@ -189,18 +190,22 @@ function fetchSepayTransactions() {
       },
     };
 
-    const req = https.request("https://my.sepay.vn/userapi/transactions/list", options, (res) => {
-      let data = "";
-      res.on("data", (chunk) => (data += chunk));
-      res.on("end", () => {
-        try {
-          const json = JSON.parse(data);
-          resolve(json);
-        } catch (e) {
-          reject(new Error("Invalid JSON from Sepay"));
-        }
-      });
-    });
+    const req = https.request(
+      "https://my.sepay.vn/userapi/transactions/list",
+      options,
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => (data += chunk));
+        res.on("end", () => {
+          try {
+            const json = JSON.parse(data);
+            resolve(json);
+          } catch (e) {
+            reject(new Error("Invalid JSON from Sepay"));
+          }
+        });
+      }
+    );
 
     req.on("error", (err) => reject(err));
     req.end();
@@ -211,7 +216,8 @@ function fetchSepayTransactions() {
 const verifyDeposit = async (req, res) => {
   try {
     const { descriptor, amount } = req.body;
-    if (!descriptor) return res.status(400).json({ message: "Missing descriptor" });
+    if (!descriptor)
+      return res.status(400).json({ message: "Missing descriptor" });
 
     const wallet = await Wallet.findOne({ where: { user_id: req.user.id } });
     if (!wallet) return res.status(404).json({ message: "Wallet not found" });
@@ -227,34 +233,61 @@ const verifyDeposit = async (req, res) => {
       : [];
 
     // Helper to normalize strings: lowercase and remove non-alphanumeric (banks may drop '+', punctuation, etc.)
-    const normalize = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const normalize = (s) =>
+      String(s || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
     const target = normalize(descriptor);
 
     // Normalize fields across possible keys and compare with normalized target
     const match = list.find((tx) => {
-      const rawDesc = tx.transaction_content || tx.description || tx.des || tx.content || tx.note || "";
+      const rawDesc =
+        tx.transaction_content ||
+        tx.description ||
+        tx.des ||
+        tx.content ||
+        tx.note ||
+        "";
       const descNorm = normalize(rawDesc);
       const amtIn = Number(tx.amount_in || 0);
       const okDesc = descNorm.includes(target);
-      const okAmt = amount ? Math.round(amtIn) === Math.round(Number(amount)) : true;
+      const okAmt = amount
+        ? Math.round(amtIn) === Math.round(Number(amount))
+        : true;
       const okIncoming = amtIn > 0; // only consider incoming transactions
       return okDesc && okAmt && okIncoming;
     });
 
     if (!match) {
-      return res.status(404).json({ message: "Không tìm thấy giao dịch phù hợp" });
+      return res
+        .status(404)
+        .json({ message: "Không tìm thấy giao dịch phù hợp" });
     }
 
     // Idempotency: do not double-credit if we've already recorded this remote transaction
-  const refId = `sepay_${match.id || match.reference_number || match.trans_id || match.code || match.reference || Date.now()}`;
-    const existed = await WalletTransaction.findOne({ where: { wallet_id: wallet.id, reference_id: refId } });
+    const refId = `sepay_${
+      match.id ||
+      match.reference_number ||
+      match.trans_id ||
+      match.code ||
+      match.reference ||
+      Date.now()
+    }`;
+    const existed = await WalletTransaction.findOne({
+      where: { wallet_id: wallet.id, reference_id: refId },
+    });
     if (existed) {
-      return res.json({ message: "Giao dịch đã được xác nhận trước đó", balance: wallet.balance });
+      return res.json({
+        message: "Giao dịch đã được xác nhận trước đó",
+        balance: wallet.balance,
+      });
     }
 
-  const creditAmount = Number(amount || match.amount_in || 0);
+    const creditAmount = Number(amount || match.amount_in || 0);
     if (!creditAmount || creditAmount <= 0) {
-      return res.status(400).json({ message: "Số tiền giao dịch không hợp lệ" });
+      return res
+        .status(400)
+        .json({ message: "Số tiền giao dịch không hợp lệ" });
     }
 
     const newBalance = Number(wallet.balance) + creditAmount;
@@ -270,7 +303,11 @@ const verifyDeposit = async (req, res) => {
       metadata: { raw: match },
     });
 
-    res.json({ message: "Xác nhận nạp tiền thành công", balance: newBalance, transaction });
+    res.json({
+      message: "Xác nhận nạp tiền thành công",
+      balance: newBalance,
+      transaction,
+    });
   } catch (error) {
     console.error("verifyDeposit error:", error);
     res.status(502).json({ message: "Không thể kiểm tra giao dịch Sepay" });

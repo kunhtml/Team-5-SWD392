@@ -94,7 +94,9 @@ const createProduct = async (req, res) => {
     if (!shop_id && req.user.role === "florist") {
       const myShop = await Shop.findOne({ where: { florist_id: req.user.id } });
       if (!myShop) {
-        return res.status(400).json({ message: "Không tìm thấy cửa hàng của bạn" });
+        return res
+          .status(400)
+          .json({ message: "Không tìm thấy cửa hàng của bạn" });
       }
       shop_id = myShop.id;
     }
@@ -103,14 +105,18 @@ const createProduct = async (req, res) => {
       return res.status(400).json({ message: "Thiếu shop_id" });
     }
     if (!name || price === undefined || stock === undefined) {
-      return res.status(400).json({ message: "Vui lòng nhập tên, giá và tồn kho" });
+      return res
+        .status(400)
+        .json({ message: "Vui lòng nhập tên, giá và tồn kho" });
     }
     const numericPrice = parseFloat(price);
     if (Number.isNaN(numericPrice) || numericPrice <= 0) {
       return res.status(400).json({ message: "Giá phải là số > 0" });
     }
     if (!category_id) {
-      return res.status(400).json({ message: "Vui lòng chọn danh mục (category_id)" });
+      return res
+        .status(400)
+        .json({ message: "Vui lòng chọn danh mục (category_id)" });
     }
 
     const product = await Product.create({
@@ -121,7 +127,8 @@ const createProduct = async (req, res) => {
       category_id,
       shop_id,
       image_url:
-        req.body.image_url || (req.file ? `/uploads/products/${req.file.filename}` : null),
+        req.body.image_url ||
+        (req.file ? `/uploads/products/${req.file.filename}` : null),
       images: images ? JSON.parse(images) : null,
       tags: tags ? JSON.parse(tags) : null,
       discount_percentage: discount_percentage || 0,
@@ -174,10 +181,14 @@ const updateProduct = async (req, res) => {
       updates.price = numericPrice;
     }
     if (updates.images && typeof updates.images === "string") {
-      try { updates.images = JSON.parse(updates.images); } catch (_) {}
+      try {
+        updates.images = JSON.parse(updates.images);
+      } catch (_) {}
     }
     if (updates.tags && typeof updates.tags === "string") {
-      try { updates.tags = JSON.parse(updates.tags); } catch (_) {}
+      try {
+        updates.tags = JSON.parse(updates.tags);
+      } catch (_) {}
     }
 
     // Image handling
@@ -289,7 +300,14 @@ module.exports = {
 const getProductsForModeration = async (req, res) => {
   try {
     // Admin only: ensure role checked in route
-    const { page = 1, limit = 10, moderation_status, search, shop_id, category_id } = req.query;
+    const {
+      page = 1,
+      limit = 10,
+      moderation_status,
+      search,
+      shop_id,
+      category_id,
+    } = req.query;
     const offset = (page - 1) * limit;
 
     const where = {};
@@ -343,7 +361,10 @@ const moderateProduct = async (req, res) => {
       await product.update({
         moderation_status: "approved",
         moderation_note: note || null,
-        status: product.status === "rejected" || product.status === "pending" ? "active" : product.status,
+        status:
+          product.status === "rejected" || product.status === "pending"
+            ? "active"
+            : product.status,
       });
     } else if (action === "reject") {
       await product.update({

@@ -86,24 +86,44 @@ const Header = () => {
                 anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
                 transformOrigin={{ vertical: "top", horizontal: "right" }}
               >
-                <MenuItem component={Link} to="/orders" onClick={handleMenuClose}>
+                <MenuItem
+                  component={Link}
+                  to="/orders"
+                  onClick={handleMenuClose}
+                >
                   Đơn hàng của tôi
                 </MenuItem>
-                <MenuItem component={Link} to="/wallet/balance" onClick={handleMenuClose}>
+                <MenuItem
+                  component={Link}
+                  to="/wallet/balance"
+                  onClick={handleMenuClose}
+                >
                   Ví
                 </MenuItem>
                 {user.role === "admin" && (
-                  <MenuItem component={Link} to="/admin" onClick={handleMenuClose}>
+                  <MenuItem
+                    component={Link}
+                    to="/admin"
+                    onClick={handleMenuClose}
+                  >
                     Admin
                   </MenuItem>
                 )}
                 {user.role === "florist" && (
-                  <MenuItem component={Link} to="/florist" onClick={handleMenuClose}>
+                  <MenuItem
+                    component={Link}
+                    to="/florist"
+                    onClick={handleMenuClose}
+                  >
                     Cửa hàng của tôi
                   </MenuItem>
                 )}
                 {user.role === "customer" && (
-                  <MenuItem component={Link} to="/shop-request" onClick={handleMenuClose}>
+                  <MenuItem
+                    component={Link}
+                    to="/shop-request"
+                    onClick={handleMenuClose}
+                  >
                     Mở cửa hàng
                   </MenuItem>
                 )}

@@ -22,6 +22,7 @@ const FloristDashboard = () => {
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [updatingOrderId, setUpdatingOrderId] = useState(null);
 
   useEffect(() => {
     fetchFloristData();
@@ -32,8 +33,9 @@ const FloristDashboard = () => {
       setLoading(true);
       const [shopRes, productsRes, ordersRes] = await Promise.all([
         api.get("/shops/my-shop"),
-        api.get("/products?shop_id=my"), // Assume filter for own shop
-        api.get("/orders/shop"),
+        // Use dedicated endpoint for florist/admin products
+        api.get("/products/mine", { params: { limit: 50 } }),
+        api.get("/orders/shop", { params: { limit: 50 } }),
       ]);
       setShop(shopRes.data.shop);
       setProducts(productsRes.data.products || []);
@@ -47,6 +49,22 @@ const FloristDashboard = () => {
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+  };
+
+  const handleProcessOrder = async (orderId) => {
+    try {
+      setUpdatingOrderId(orderId);
+      await api.put(`/orders/${orderId}/status`, { status: "processing" });
+      // Optimistically update local state
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, status: "processing" } : o))
+      );
+    } catch (err) {
+      console.error("Cập nhật trạng thái đơn hàng thất bại:", err);
+      window.alert("Không thể cập nhật trạng thái. Vui lòng thử lại.");
+    } finally {
+      setUpdatingOrderId(null);
+    }
   };
 
   if (loading) return <Typography>Loading...</Typography>;
@@ -95,6 +113,13 @@ const FloristDashboard = () => {
               </TableRow>
             </TableHead>
             <TableBody>
+              {products.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">
+                    Chưa có sản phẩm nào.
+                  </TableCell>
+                </TableRow>
+              )}
               {products.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell>{product.id}</TableCell>
@@ -147,20 +172,29 @@ const FloristDashboard = () => {
               </TableRow>
             </TableHead>
             <TableBody>
+              {orders.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} align="center">
+                    Chưa có đơn hàng nào.
+                  </TableCell>
+                </TableRow>
+              )}
               {orders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell>{order.id}</TableCell>
                   <TableCell>{order.customer?.name}</TableCell>
                   <TableCell>
-                    {order.total_amount.toLocaleString("vi-VN")} VNĐ
+                    {parseFloat(order.total_amount).toLocaleString("vi-VN", {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 2,
+                    })} VNĐ
                   </TableCell>
                   <TableCell>{order.status}</TableCell>
                   <TableCell>
                     <Button
                       size="small"
-                      onClick={() => {
-                        /* Update status to processing */
-                      }}
+                      disabled={updatingOrderId === order.id || order.status !== "pending"}
+                      onClick={() => handleProcessOrder(order.id)}
                     >
                       Xử Lý
                     </Button>

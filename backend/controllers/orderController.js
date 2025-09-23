@@ -106,6 +106,8 @@ const createOrder = async (req, res) => {
       where: { id: items[0].shop_id },
     });
 
+    // Seller credit will be processed upon order completion/delivery, not here
+
     res.status(201).json({ message: "Order created successfully", order });
   } catch (error) {
     console.error(error);
@@ -184,7 +186,11 @@ const getOrderById = async (req, res) => {
     if (req.user.role === "customer" && order.user_id !== req.user.id) {
       return res.status(403).json({ message: "Access denied" });
     }
-    if (req.user.role === "florist" && order.shop && order.shop.florist_id !== req.user.id) {
+    if (
+      req.user.role === "florist" &&
+      order.shop &&
+      order.shop.florist_id !== req.user.id
+    ) {
       return res.status(403).json({ message: "Access denied" });
     }
 
@@ -221,6 +227,42 @@ const updateOrderStatus = async (req, res) => {
     if (status === "completed" || status === "delivered") {
       await shop.increment(["completed_orders"], { by: 1 });
       await shop.increment(["total_revenue"], { by: order.total_amount });
+
+      // Credit seller wallet now if order was paid by wallet and not yet credited
+      try {
+        if (
+          order.payment_method === "wallet" &&
+          (order.payment_status === "paid" || order.payment_status === "captured")
+        ) {
+          const sellerWallet = await Wallet.findOne({
+            where: { user_id: shop.florist_id },
+          });
+          const ensureWallet = async () =>
+            sellerWallet || (await Wallet.create({ user_id: shop.florist_id, balance: 0.0 }));
+          const walletToUse = await ensureWallet();
+          const existedCredit = await WalletTransaction.findOne({
+            where: {
+              wallet_id: walletToUse.id,
+              reference_id: `order_${order.id}_seller_credit`,
+            },
+          });
+          if (!existedCredit) {
+            const newBalance = Number(walletToUse.balance) + Number(order.total_amount);
+            await walletToUse.update({ balance: newBalance });
+            await WalletTransaction.create({
+              wallet_id: walletToUse.id,
+              type: "deposit",
+              amount: Number(order.total_amount),
+              description: `Thu nhập đơn hàng #${order.id}`,
+              balance_after: newBalance,
+              reference_id: `order_${order.id}_seller_credit`,
+              metadata: { order_id: order.id },
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Credit seller on completion failed:", e);
+      }
     } else if (status === "cancelled" || status === "rejected") {
       await shop.increment(["cancelled_orders"], { by: 1 });
       // Refund wallet if paid
@@ -243,6 +285,44 @@ const updateOrderStatus = async (req, res) => {
             reference_id: `order_${order.id}`,
           });
           await order.update({ payment_status: "refunded" });
+        }
+
+        // Reverse seller credit only if it was previously credited
+        try {
+          if (order.shop && order.shop.florist_id) {
+            const sellerWallet = await Wallet.findOne({
+              where: { user_id: order.shop.florist_id },
+            });
+            if (sellerWallet) {
+              const existedCredit = await WalletTransaction.findOne({
+                where: {
+                  wallet_id: sellerWallet.id,
+                  reference_id: `order_${order.id}_seller_credit`,
+                },
+              });
+              const existedReversal = await WalletTransaction.findOne({
+                where: {
+                  wallet_id: sellerWallet.id,
+                  reference_id: `order_${order.id}_seller_reversal`,
+                },
+              });
+              if (existedCredit && !existedReversal) {
+                const newBalance = Number(sellerWallet.balance) - Number(order.total_amount);
+                await sellerWallet.update({ balance: newBalance });
+                await WalletTransaction.create({
+                  wallet_id: sellerWallet.id,
+                  type: "withdrawal",
+                  amount: -Number(order.total_amount),
+                  description: `Hoàn tiền do đơn bị hủy #${order.id}`,
+                  balance_after: newBalance,
+                  reference_id: `order_${order.id}_seller_reversal`,
+                  metadata: { order_id: order.id },
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Seller credit reversal failed:", e);
         }
       }
     } else if (status === "processing") {
@@ -318,7 +398,10 @@ const cancelOrder = async (req, res) => {
     if (!["pending", "processing"].includes(order.status)) {
       return res
         .status(400)
-        .json({ message: "Chỉ có thể hủy đơn ở trạng thái 'pending' hoặc 'processing'" });
+        .json({
+          message:
+            "Chỉ có thể hủy đơn ở trạng thái 'pending' hoặc 'processing'",
+        });
     }
 
     // Update order status
@@ -334,7 +417,9 @@ const cancelOrder = async (req, res) => {
 
     // Refund wallet if paid by wallet
     if (order.payment_status === "paid" && order.payment_method === "wallet") {
-      const wallet = await Wallet.findOne({ where: { user_id: order.user_id } });
+      const wallet = await Wallet.findOne({
+        where: { user_id: order.user_id },
+      });
       if (wallet) {
         const refundAmount = order.total_amount;
         await wallet.update({ balance: wallet.balance + refundAmount });
@@ -347,6 +432,44 @@ const cancelOrder = async (req, res) => {
           reference_id: `order_${order.id}_refund`,
         });
         await order.update({ payment_status: "refunded" });
+      }
+
+      // Reverse seller credit only if it was previously credited
+      try {
+        if (order.shop && order.shop.florist_id) {
+          const sellerWallet = await Wallet.findOne({
+            where: { user_id: order.shop.florist_id },
+          });
+          if (sellerWallet) {
+            const existedCredit = await WalletTransaction.findOne({
+              where: {
+                wallet_id: sellerWallet.id,
+                reference_id: `order_${order.id}_seller_credit`,
+              },
+            });
+            const existedReversal = await WalletTransaction.findOne({
+              where: {
+                wallet_id: sellerWallet.id,
+                reference_id: `order_${order.id}_seller_reversal`,
+              },
+            });
+            if (existedCredit && !existedReversal) {
+              const newBalance = Number(sellerWallet.balance) - Number(order.total_amount);
+              await sellerWallet.update({ balance: newBalance });
+              await WalletTransaction.create({
+                wallet_id: sellerWallet.id,
+                type: "withdrawal",
+                amount: -Number(order.total_amount),
+                description: `Hoàn tiền do khách hủy #${order.id}`,
+                balance_after: newBalance,
+                reference_id: `order_${order.id}_seller_reversal`,
+                metadata: { order_id: order.id },
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Seller credit reversal failed:", e);
       }
     }
 
@@ -362,7 +485,9 @@ const updateShippingAddress = async (req, res) => {
   try {
     const { shipping_address } = req.body;
     if (!shipping_address || String(shipping_address).trim().length < 5) {
-      return res.status(400).json({ message: "Địa chỉ giao hàng không hợp lệ" });
+      return res
+        .status(400)
+        .json({ message: "Địa chỉ giao hàng không hợp lệ" });
     }
 
     const order = await Order.findByPk(req.params.id);
@@ -373,7 +498,9 @@ const updateShippingAddress = async (req, res) => {
 
     // Allow edit when pending or processing only
     if (!["pending", "processing"].includes(order.status)) {
-      return res.status(400).json({ message: "Không thể sửa địa chỉ khi đơn đã xử lý xa hơn" });
+      return res
+        .status(400)
+        .json({ message: "Không thể sửa địa chỉ khi đơn đã xử lý xa hơn" });
     }
 
     await order.update({ shipping_address });

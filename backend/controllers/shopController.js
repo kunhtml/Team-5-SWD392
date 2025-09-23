@@ -260,7 +260,9 @@ const getShopRequests = async (req, res) => {
 const getMyShopRequest = async (req, res) => {
   try {
     if (req.user.role !== "customer") {
-      return res.status(403).json({ message: "Only customers can view their shop request" });
+      return res
+        .status(403)
+        .json({ message: "Only customers can view their shop request" });
     }
 
     const latest = await ShopRequest.findOne({

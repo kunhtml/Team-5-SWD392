@@ -30,8 +30,22 @@ const FloristProducts = () => {
   const [loading, setLoading] = useState(true);
   const [openCreate, setOpenCreate] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
-  const [form, setForm] = useState({ name: "", price: "", stock: "", description: "", category_id: "" });
-  const [editForm, setEditForm] = useState({ id: null, name: "", price: "", stock: "", description: "", category_id: "", image_url: "" });
+  const [form, setForm] = useState({
+    name: "",
+    price: "",
+    stock: "",
+    description: "",
+    category_id: "",
+  });
+  const [editForm, setEditForm] = useState({
+    id: null,
+    name: "",
+    price: "",
+    stock: "",
+    description: "",
+    category_id: "",
+    image_url: "",
+  });
   const [imageFile, setImageFile] = useState(null);
   const [editImageFile, setEditImageFile] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -43,7 +57,12 @@ const FloristProducts = () => {
     try {
       setLoading(true);
       const res = await api.get("/products/mine", {
-        params: { page, limit: 10, search: search || undefined, status: status || undefined },
+        params: {
+          page,
+          limit: 10,
+          search: search || undefined,
+          status: status || undefined,
+        },
       });
       setProducts(res.data.products || []);
       setPages(res.data.pages || 1);
@@ -73,7 +92,13 @@ const FloristProducts = () => {
   }, [openCreate]);
 
   const resetCreate = () => {
-    setForm({ name: "", price: "", stock: "", description: "", category_id: "" });
+    setForm({
+      name: "",
+      price: "",
+      stock: "",
+      description: "",
+      category_id: "",
+    });
     setImageFile(null);
     setError("");
   };
@@ -82,7 +107,7 @@ const FloristProducts = () => {
     setEditForm({
       id: p.id,
       name: p.name || "",
-      price: p.price || "",
+      price: p.price != null ? String(p.price).replace(/\D/g, "") : "",
       stock: p.stock || "",
       description: p.description || "",
       category_id: p.category?.id || p.category_id || "",
@@ -97,9 +122,9 @@ const FloristProducts = () => {
     setSaving(true);
     setError("");
     try {
-      const priceNum = parseFloat(form.price);
-      if (!isFinite(priceNum) || priceNum <= 0) {
-        throw new Error("Giá phải là số > 0");
+      const priceNum = parseInt(form.price, 10);
+      if (!Number.isFinite(priceNum) || priceNum <= 0) {
+        throw new Error("Giá phải là số nguyên dương");
       }
       let uploadedUrl = null;
       if (imageFile) {
@@ -136,7 +161,9 @@ const FloristProducts = () => {
       setPage(1);
       fetchData();
     } catch (e) {
-      setError(e.response?.data?.message || e.message || "Không thể tạo sản phẩm");
+      setError(
+        e.response?.data?.message || e.message || "Không thể tạo sản phẩm"
+      );
     } finally {
       setSaving(false);
     }
@@ -146,9 +173,9 @@ const FloristProducts = () => {
     setSavingEdit(true);
     setError("");
     try {
-      const priceNum = parseFloat(editForm.price);
-      if (!isFinite(priceNum) || priceNum <= 0) {
-        throw new Error("Giá phải là số > 0");
+      const priceNum = parseInt(editForm.price, 10);
+      if (!Number.isFinite(priceNum) || priceNum <= 0) {
+        throw new Error("Giá phải là số nguyên dương");
       }
       let uploadedUrl = null;
       if (editImageFile) {
@@ -157,7 +184,10 @@ const FloristProducts = () => {
         const fd = new FormData();
         fd.append("key", imgbbKey);
         fd.append("image", editImageFile);
-        const res = await fetch("https://api.imgbb.com/1/upload", { method: "POST", body: fd });
+        const res = await fetch("https://api.imgbb.com/1/upload", {
+          method: "POST",
+          body: fd,
+        });
         const data = await res.json();
         if (!data?.success) throw new Error("Tải ảnh lên thất bại");
         uploadedUrl = data.data?.url || data.data?.display_url;
@@ -170,14 +200,17 @@ const FloristProducts = () => {
         description: editForm.description,
         category_id: parseInt(editForm.category_id, 10),
       };
-      if (uploadedUrl) payload.image_url = uploadedUrl; else if (editForm.image_url) payload.image_url = editForm.image_url;
+      if (uploadedUrl) payload.image_url = uploadedUrl;
+      else if (editForm.image_url) payload.image_url = editForm.image_url;
 
       await api.put(`/products/${editForm.id}`, payload);
       setOpenEdit(false);
       setPage(1);
       fetchData();
     } catch (e) {
-      setError(e.response?.data?.message || e.message || "Không thể cập nhật sản phẩm");
+      setError(
+        e.response?.data?.message || e.message || "Không thể cập nhật sản phẩm"
+      );
     } finally {
       setSavingEdit(false);
     }
@@ -195,17 +228,29 @@ const FloristProducts = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') { setPage(1); fetchData(); }
+            if (e.key === "Enter") {
+              setPage(1);
+              fetchData();
+            }
           }}
         />
         <TextField
           size="small"
           label="Trạng thái"
           value={status}
-          onChange={(e) => { setPage(1); setStatus(e.target.value); }}
+          onChange={(e) => {
+            setPage(1);
+            setStatus(e.target.value);
+          }}
           placeholder="active/pending/hidden"
         />
-        <Button variant="outlined" onClick={() => { setPage(1); fetchData(); }}>
+        <Button
+          variant="outlined"
+          onClick={() => {
+            setPage(1);
+            fetchData();
+          }}
+        >
           Lọc
         </Button>
         <Box sx={{ flex: 1 }} />
@@ -232,14 +277,26 @@ const FloristProducts = () => {
               <TableRow key={p.id}>
                 <TableCell>{p.id}</TableCell>
                 <TableCell>{p.name}</TableCell>
-                <TableCell>{parseFloat(p.price).toLocaleString('vi-VN')} VNĐ</TableCell>
-                <TableCell>{p.stock}</TableCell>
-                <TableCell>{p.status} / {p.moderation_status || '-'}</TableCell>
                 <TableCell>
-                  <Button size="small" variant="outlined" onClick={() => openEditDialog(p)}>Sửa</Button>
+                  {parseFloat(p.price).toLocaleString("vi-VN")} VNĐ
+                </TableCell>
+                <TableCell>{p.stock}</TableCell>
+                <TableCell>
+                  {p.status} / {p.moderation_status || "-"}
                 </TableCell>
                 <TableCell>
-                  {p.updatedAt ? new Date(p.updatedAt).toLocaleString('vi-VN') : '-'}
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => openEditDialog(p)}
+                  >
+                    Sửa
+                  </Button>
+                </TableCell>
+                <TableCell>
+                  {p.updatedAt
+                    ? new Date(p.updatedAt).toLocaleString("vi-VN")
+                    : "-"}
                 </TableCell>
               </TableRow>
             ))}
@@ -250,7 +307,15 @@ const FloristProducts = () => {
         <Pagination count={pages} page={page} onChange={(_, p) => setPage(p)} />
       </Stack>
 
-      <Dialog open={openCreate} onClose={() => { setOpenCreate(false); resetCreate(); }} maxWidth="sm" fullWidth>
+      <Dialog
+        open={openCreate}
+        onClose={() => {
+          setOpenCreate(false);
+          resetCreate();
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Tạo sản phẩm</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -265,27 +330,28 @@ const FloristProducts = () => {
               label="Danh mục"
               select
               value={form.category_id}
-              onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, category_id: e.target.value })
+              }
               required
             >
               {categories.map((c) => (
-                <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                <MenuItem key={c.id} value={c.id}>
+                  {c.name}
+                </MenuItem>
               ))}
             </TextField>
             <TextField
               label="Giá"
-              type="number"
-              inputProps={{ min: 1, step: 0.01 }}
+              type="text"
+              inputMode="numeric"
               value={form.price}
               onChange={(e) => {
-                // Convert commas to dots and only allow digits and a single dot
-                let v = e.target.value.replace(/,/g, ".");
-                if (v === "" || /^\d*(?:\.\d*)?$/.test(v)) {
-                  setForm({ ...form, price: v });
-                }
+                const v = e.target.value.replace(/\D/g, "");
+                setForm({ ...form, price: v });
               }}
               required
-              helperText="Giá phải > 0 (dùng dấu chấm cho thập phân)"
+              helperText="Chỉ nhập số, > 0"
             />
             <TextField
               label="Tồn kho"
@@ -299,7 +365,9 @@ const FloristProducts = () => {
               multiline
               minRows={3}
               value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, description: e.target.value })
+              }
             />
             <Button variant="outlined" component="label">
               Chọn ảnh
@@ -321,14 +389,26 @@ const FloristProducts = () => {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { setOpenCreate(false); resetCreate(); }}>Hủy</Button>
+          <Button
+            onClick={() => {
+              setOpenCreate(false);
+              resetCreate();
+            }}
+          >
+            Hủy
+          </Button>
           <Button variant="contained" onClick={handleCreate} disabled={saving}>
-            {saving ? 'Đang lưu...' : 'Tạo'}
+            {saving ? "Đang lưu..." : "Tạo"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={openEdit} onClose={() => setOpenEdit(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={openEdit}
+        onClose={() => setOpenEdit(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Sửa sản phẩm (sau khi lưu sẽ chờ duyệt)</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -336,39 +416,45 @@ const FloristProducts = () => {
             <TextField
               label="Tên sản phẩm"
               value={editForm.name}
-              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              onChange={(e) =>
+                setEditForm({ ...editForm, name: e.target.value })
+              }
               required
             />
             <TextField
               label="Danh mục"
               select
               value={editForm.category_id}
-              onChange={(e) => setEditForm({ ...editForm, category_id: e.target.value })}
+              onChange={(e) =>
+                setEditForm({ ...editForm, category_id: e.target.value })
+              }
               required
             >
               {categories.map((c) => (
-                <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                <MenuItem key={c.id} value={c.id}>
+                  {c.name}
+                </MenuItem>
               ))}
             </TextField>
             <TextField
               label="Giá"
-              type="number"
-              inputProps={{ min: 1, step: 0.01 }}
+              type="text"
+              inputMode="numeric"
               value={editForm.price}
               onChange={(e) => {
-                let v = e.target.value.replace(/,/g, ".");
-                if (v === "" || /^\d*(?:\.\d*)?$/.test(v)) {
-                  setEditForm({ ...editForm, price: v });
-                }
+                const v = e.target.value.replace(/\D/g, "");
+                setEditForm({ ...editForm, price: v });
               }}
               required
-              helperText="Giá phải > 0 (dùng dấu chấm cho thập phân)"
+              helperText="Chỉ nhập số, > 0"
             />
             <TextField
               label="Tồn kho"
               type="number"
               value={editForm.stock}
-              onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
+              onChange={(e) =>
+                setEditForm({ ...editForm, stock: e.target.value })
+              }
               required
             />
             <TextField
@@ -376,7 +462,9 @@ const FloristProducts = () => {
               multiline
               minRows={3}
               value={editForm.description}
-              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+              onChange={(e) =>
+                setEditForm({ ...editForm, description: e.target.value })
+              }
             />
             <Button variant="outlined" component="label">
               Chọn ảnh mới (tuỳ chọn)
@@ -394,7 +482,9 @@ const FloristProducts = () => {
               label="Hoặc dán URL ảnh"
               placeholder="https://..."
               value={editForm.image_url || ""}
-              onChange={(e) => setEditForm({ ...editForm, image_url: e.target.value })}
+              onChange={(e) =>
+                setEditForm({ ...editForm, image_url: e.target.value })
+              }
               fullWidth
             />
             {editImageFile && (
@@ -406,8 +496,12 @@ const FloristProducts = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenEdit(false)}>Hủy</Button>
-          <Button variant="contained" onClick={handleEditSave} disabled={savingEdit}>
-            {savingEdit ? 'Đang lưu...' : 'Lưu'}
+          <Button
+            variant="contained"
+            onClick={handleEditSave}
+            disabled={savingEdit}
+          >
+            {savingEdit ? "Đang lưu..." : "Lưu"}
           </Button>
         </DialogActions>
       </Dialog>

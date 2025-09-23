@@ -13,8 +13,25 @@ const router = express.Router();
 
 // Customer routes
 router.post("/", authMiddleware, roleAuth(["customer"]), createOrder);
-router.get("/", authMiddleware, roleAuth(["customer", "florist", "admin"]), getUserOrders);
-router.get("/:id", authMiddleware, roleAuth(["customer", "florist", "admin"]), getOrderById);
+router.get(
+  "/",
+  authMiddleware,
+  roleAuth(["customer", "florist", "admin"]),
+  getUserOrders
+);
+// Florist/Admin listing for shop orders (must be before dynamic ':id')
+router.get(
+  "/shop",
+  authMiddleware,
+  roleAuth(["florist", "admin"]),
+  getShopOrders
+);
+router.get(
+  "/:id",
+  authMiddleware,
+  roleAuth(["customer", "florist", "admin"]),
+  getOrderById
+);
 router.put(
   "/:id/shipping",
   authMiddleware,
@@ -34,12 +51,6 @@ router.put(
   authMiddleware,
   roleAuth(["florist", "admin"]),
   updateOrderStatus
-);
-router.get(
-  "/shop",
-  authMiddleware,
-  roleAuth(["florist", "admin"]),
-  getShopOrders
 );
 
 module.exports = router;
