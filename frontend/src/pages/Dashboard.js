@@ -63,7 +63,6 @@ const Dashboard = () => {
                 <Typography>
                   Xem đơn hàng, ví tiền, yêu cầu mở cửa hàng
                 </Typography>
-                <Chip label="Đơn Hàng" color="success" sx={{ mt: 1 }} />
               </CardContent>
             </Card>
           </Grid>
