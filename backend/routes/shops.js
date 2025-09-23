@@ -8,6 +8,7 @@ const {
   approveShopRequest,
   getMyShop,
   getShopRequests,
+  getMyShopRequest,
 } = require("../controllers/shopController");
 
 const router = express.Router();
@@ -47,6 +48,12 @@ router.post(
   roleAuth(["customer"]),
   upload.single("business_license"),
   requestShop
+);
+router.get(
+  "/request/my",
+  authMiddleware,
+  roleAuth(["customer"]),
+  getMyShopRequest
 );
 router.get("/my-shop", authMiddleware, roleAuth(["florist"]), getMyShop);
 router.put(
