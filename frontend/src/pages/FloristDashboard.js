@@ -20,6 +20,7 @@ import {
   DialogActions,
   Divider,
   TextField,
+  Avatar,
 } from "@mui/material";
 
 const FloristDashboard = () => {
@@ -192,6 +193,15 @@ const FloristDashboard = () => {
       {shop && (
         <Paper sx={{ p: 3, mb: 4 }}>
           <Typography variant="h6">Thông Tin Cửa Hàng</Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1, mb: 2 }}>
+            <Avatar
+              src={shop.image_url || undefined}
+              alt={shop.name || "Shop"}
+              sx={{ width: 72, height: 72 }}
+            >
+              {(shop?.name || "?").charAt(0).toUpperCase()}
+            </Avatar>
+          </Box>
           <Typography>Tên: {shop.name}</Typography>
           <Typography>
             Doanh Thu:{" "}
