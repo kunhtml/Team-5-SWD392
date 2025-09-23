@@ -42,6 +42,14 @@ const Dashboard = () => {
                 <Typography variant="h6">Cửa Hàng Của Bạn</Typography>
                 <Typography>Quản lý sản phẩm, đơn hàng, doanh thu</Typography>
                 <Chip label="Sản Phẩm" color="secondary" sx={{ mt: 1 }} />
+                <Box sx={{ mt: 2 }}>
+                  <Button
+                    variant="contained"
+                    onClick={() => navigate("/florist/products")}
+                  >
+                    Xem sản phẩm của shop
+                  </Button>
+                </Box>
               </CardContent>
             </Card>
           </Grid>
