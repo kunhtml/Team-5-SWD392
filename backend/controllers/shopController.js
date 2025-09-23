@@ -193,6 +193,40 @@ const getMyShop = async (req, res) => {
   }
 };
 
+// Update current florist's shop basic info
+const updateMyShop = async (req, res) => {
+  try {
+    if (req.user.role !== "florist") {
+      return res
+        .status(403)
+        .json({ message: "Only florists can update their shop" });
+    }
+
+    const shop = await Shop.findOne({ where: { florist_id: req.user.id } });
+    if (!shop) return res.status(404).json({ message: "No shop found" });
+
+    const { name, description, address, phone, email, image_url } = req.body || {};
+
+    const updates = {};
+    if (name !== undefined) updates.name = String(name).trim();
+    if (description !== undefined) updates.description = String(description);
+    if (address !== undefined) updates.address = String(address);
+    if (phone !== undefined) updates.phone = String(phone);
+    if (email !== undefined) updates.email = String(email).trim();
+    if (image_url !== undefined) updates.image_url = String(image_url).trim();
+
+    if (updates.name !== undefined && updates.name.length === 0) {
+      return res.status(400).json({ message: "Shop name is required" });
+    }
+
+    await shop.update(updates);
+    res.json({ message: "Shop updated successfully", shop });
+  } catch (error) {
+    console.error("updateMyShop error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 // New function for listing shop requests (admin only)
 const getShopRequests = async (req, res) => {
   try {
@@ -335,3 +369,4 @@ const recalcMyShop = async (req, res) => {
 };
 
 module.exports.recalcMyShop = recalcMyShop;
+module.exports.updateMyShop = updateMyShop;
