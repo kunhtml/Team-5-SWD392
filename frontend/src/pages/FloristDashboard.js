@@ -49,8 +49,30 @@ const FloristDashboard = () => {
       setOrders(ordersRes.data.orders || []);
     } catch (error) {
       console.error("Error fetching florist data:", error);
+      // Clear stale data if fetch fails
+      setProducts([]);
+      setOrders([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshShopStats = async () => {
+    try {
+      const res = await api.get("/shops/my-shop");
+      setShop(res.data.shop);
+    } catch (e) {
+      console.error("Không thể tải lại thông tin cửa hàng:", e);
+    }
+  };
+
+  const reloadProducts = async () => {
+    try {
+      const res = await api.get("/products/mine", { params: { limit: 50 } });
+      setProducts(res.data.products || []);
+    } catch (e) {
+      console.error("Không thể tải sản phẩm:", e);
+      setProducts([]);
     }
   };
 
@@ -76,6 +98,7 @@ const FloristDashboard = () => {
       setOrders((prev) =>
         prev.map((o) => (o.id === selectedOrder.id ? { ...o, status: "cancelled" } : o))
       );
+      await refreshShopStats();
       handleCloseOrderDialog();
     } catch (err) {
       console.error("Hủy đơn thất bại:", err);
@@ -89,16 +112,27 @@ const FloristDashboard = () => {
     if (!selectedOrder) return;
     try {
       setActionLoading(true);
-      await api.put(`/orders/${selectedOrder.id}/status`, { status: "delivered" });
+      await api.put(`/orders/${selectedOrder.id}/status`, { status: "completed" });
       setOrders((prev) =>
-        prev.map((o) => (o.id === selectedOrder.id ? { ...o, status: "delivered" } : o))
+        prev.map((o) => (o.id === selectedOrder.id ? { ...o, status: "completed" } : o))
       );
+      await refreshShopStats();
       handleCloseOrderDialog();
     } catch (err) {
       console.error("Cập nhật giao thành công thất bại:", err);
       window.alert("Không thể cập nhật giao thành công. Vui lòng thử lại.");
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const reloadOrders = async () => {
+    try {
+      const res = await api.get("/orders/shop", { params: { limit: 50 } });
+      setOrders(res.data.orders || []);
+    } catch (e) {
+      console.error("Không thể tải đơn hàng:", e);
+      setOrders([]);
     }
   };
 
@@ -126,6 +160,31 @@ const FloristDashboard = () => {
           <Typography>
             Đánh Giá: {shop.average_rating}/5 ({shop.total_reviews} reviews)
           </Typography>
+          <Box sx={{ mt: 2 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={async () => {
+                try {
+                  await api.post("/shops/my-shop/recalc");
+                  await refreshShopStats();
+                } catch (e) {
+                  console.error("Recalc failed:", e);
+                  window.alert("Không thể đồng bộ số liệu. Hãy thử lại.");
+                }
+              }}
+            >
+              Đồng bộ số liệu
+            </Button>
+            <Button
+              size="small"
+              sx={{ ml: 1 }}
+              variant="text"
+              onClick={refreshShopStats}
+            >
+              Làm mới
+            </Button>
+          </Box>
         </Paper>
       )}
 
@@ -136,6 +195,11 @@ const FloristDashboard = () => {
 
       {tabValue === 0 && (
         <TableContainer component={Paper}>
+          <Box sx={{ display: "flex", justifyContent: "flex-end", p: 2 }}>
+            <Button size="small" variant="outlined" onClick={reloadProducts}>
+              Tải lại
+            </Button>
+          </Box>
           <Table>
             <TableHead>
               <TableRow>
@@ -196,6 +260,11 @@ const FloristDashboard = () => {
 
       {tabValue === 1 && (
         <TableContainer component={Paper}>
+          <Box sx={{ display: "flex", justifyContent: "flex-end", p: 2 }}>
+            <Button size="small" variant="outlined" onClick={reloadOrders}>
+              Tải lại
+            </Button>
+          </Box>
           <Table>
             <TableHead>
               <TableRow>

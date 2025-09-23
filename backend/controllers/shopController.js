@@ -1,4 +1,4 @@
-const { Shop, User, ShopRequest, Product } = require("../models");
+const { Shop, User, ShopRequest, Product, Order } = require("../models");
 const { Op } = require("sequelize");
 
 const getAllShops = async (req, res) => {
@@ -286,3 +286,52 @@ module.exports = {
   getShopRequests, // Added export
   getMyShopRequest,
 };
+
+// ====== Utilities to recalculate shop stats from orders ======
+async function recalcShopStats(shopId) {
+  // Count orders by status groups and sum revenue for completed/delivered
+  const [completedCount, cancelledCount, pendingCount, revenueSum] = await Promise.all([
+    Order.count({ where: { shop_id: shopId, status: { [Op.in]: ["completed", "delivered"] } } }),
+    Order.count({ where: { shop_id: shopId, status: { [Op.in]: ["cancelled", "rejected"] } } }),
+    Order.count({ where: { shop_id: shopId, status: { [Op.in]: ["pending", "processing"] } } }),
+    Order.sum("total_amount", { where: { shop_id: shopId, status: { [Op.in]: ["completed", "delivered"] } } }),
+  ]);
+
+  const totalRevenue = Number(revenueSum || 0);
+  await Shop.update(
+    {
+      completed_orders: completedCount,
+      cancelled_orders: cancelledCount,
+      pending_orders: pendingCount,
+      total_revenue: totalRevenue,
+    },
+    { where: { id: shopId } }
+  );
+  return await Shop.findByPk(shopId);
+}
+
+// Recalculate stats for current florist's shop
+const recalcMyShop = async (req, res) => {
+  try {
+    if (req.user.role !== "florist" && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    let shop = null;
+    if (req.user.role === "florist") {
+      shop = await Shop.findOne({ where: { florist_id: req.user.id } });
+      if (!shop) return res.status(404).json({ message: "No shop found" });
+    } else if (req.user.role === "admin") {
+      const { shop_id } = req.body || {};
+      if (!shop_id) return res.status(400).json({ message: "Missing shop_id" });
+      shop = await Shop.findByPk(shop_id);
+      if (!shop) return res.status(404).json({ message: "Shop not found" });
+    }
+    const updated = await recalcShopStats(shop.id);
+    res.json({ message: "Recalculated", shop: updated });
+  } catch (err) {
+    console.error("recalcMyShop error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+module.exports.recalcMyShop = recalcMyShop;

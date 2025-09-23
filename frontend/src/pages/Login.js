@@ -26,7 +26,14 @@ const Login = () => {
     e.preventDefault();
     dispatch(login(formData)).then((result) => {
       if (login.fulfilled.match(result)) {
-        navigate("/dashboard");
+        const role = result.payload?.user?.role;
+        if (role === "florist") {
+          navigate("/florist");
+        } else if (role === "admin") {
+          navigate("/admin");
+        } else {
+          navigate("/dashboard");
+        }
       }
     });
   };

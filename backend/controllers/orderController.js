@@ -222,49 +222,70 @@ const updateOrderStatus = async (req, res) => {
     const oldStatus = order.status;
     await order.update({ status });
 
-    // Update shop stats based on status change
+    // Update shop stats based on status transition
     const shop = order.shop;
     if (status === "completed" || status === "delivered") {
-      await shop.increment(["completed_orders"], { by: 1 });
-      await shop.increment(["total_revenue"], { by: order.total_amount });
-
-      // Credit seller wallet now if order was paid by wallet and not yet credited
-      try {
-        if (
-          order.payment_method === "wallet" &&
-          (order.payment_status === "paid" || order.payment_status === "captured")
-        ) {
-          const sellerWallet = await Wallet.findOne({
-            where: { user_id: shop.florist_id },
-          });
-          const ensureWallet = async () =>
-            sellerWallet || (await Wallet.create({ user_id: shop.florist_id, balance: 0.0 }));
-          const walletToUse = await ensureWallet();
-          const existedCredit = await WalletTransaction.findOne({
-            where: {
-              wallet_id: walletToUse.id,
-              reference_id: `order_${order.id}_seller_credit`,
-            },
-          });
-          if (!existedCredit) {
-            const newBalance = Number(walletToUse.balance) + Number(order.total_amount);
-            await walletToUse.update({ balance: newBalance });
-            await WalletTransaction.create({
-              wallet_id: walletToUse.id,
-              type: "deposit",
-              amount: Number(order.total_amount),
-              description: `Thu nhập đơn hàng #${order.id}`,
-              balance_after: newBalance,
-              reference_id: `order_${order.id}_seller_credit`,
-              metadata: { order_id: order.id },
-            });
+      // Only count once if moving into a completed/delivered state
+      if (oldStatus !== "completed" && oldStatus !== "delivered") {
+        // Decrease pending if applicable
+        try {
+          if (Number(shop.pending_orders) > 0) {
+            await shop.decrement(["pending_orders"], { by: 1 });
           }
+        } catch (e) {
+          console.warn("Could not decrement pending_orders:", e?.message || e);
         }
-      } catch (e) {
-        console.error("Credit seller on completion failed:", e);
+        await shop.increment(["completed_orders"], { by: 1 });
+        await shop.increment(["total_revenue"], { by: order.total_amount });
+
+        // Credit seller wallet now if order was paid by wallet and not yet credited
+        try {
+          if (
+            order.payment_method === "wallet" &&
+            (order.payment_status === "paid" || order.payment_status === "captured")
+          ) {
+            const sellerWallet = await Wallet.findOne({
+              where: { user_id: shop.florist_id },
+            });
+            const ensureWallet = async () =>
+              sellerWallet || (await Wallet.create({ user_id: shop.florist_id, balance: 0.0 }));
+            const walletToUse = await ensureWallet();
+            const existedCredit = await WalletTransaction.findOne({
+              where: {
+                wallet_id: walletToUse.id,
+                reference_id: `order_${order.id}_seller_credit`,
+              },
+            });
+            if (!existedCredit) {
+              const newBalance = Number(walletToUse.balance) + Number(order.total_amount);
+              await walletToUse.update({ balance: newBalance });
+              await WalletTransaction.create({
+                wallet_id: walletToUse.id,
+                type: "deposit",
+                amount: Number(order.total_amount),
+                description: `Thu nhập đơn hàng #${order.id}`,
+                balance_after: newBalance,
+                reference_id: `order_${order.id}_seller_credit`,
+                metadata: { order_id: order.id },
+              });
+            }
+          }
+        } catch (e) {
+          console.error("Credit seller on completion failed:", e);
+        }
       }
     } else if (status === "cancelled" || status === "rejected") {
-      await shop.increment(["cancelled_orders"], { by: 1 });
+      // Only count once if moving into a cancelled/rejected state
+      if (oldStatus !== "cancelled" && oldStatus !== "rejected") {
+        try {
+          if (Number(shop.pending_orders) > 0) {
+            await shop.decrement(["pending_orders"], { by: 1 });
+          }
+        } catch (e) {
+          console.warn("Could not decrement pending_orders:", e?.message || e);
+        }
+        await shop.increment(["cancelled_orders"], { by: 1 });
+      }
       // Refund wallet if paid
       if (
         order.payment_status === "paid" &&
@@ -326,7 +347,7 @@ const updateOrderStatus = async (req, res) => {
         }
       }
     } else if (status === "processing") {
-      await shop.increment(["pending_orders"], { by: 1 });
+      // No changes to aggregate counters; already counted as pending on creation
     }
 
     res.json({ message: "Order status updated", order });
@@ -411,8 +432,13 @@ const cancelOrder = async (req, res) => {
     const shop = order.shop;
     if (shop) {
       await shop.increment(["cancelled_orders"], { by: 1 });
-      // Optionally decrease pending_orders if you track it strictly
-      // await shop.decrement(["pending_orders"], { by: 1 });
+      try {
+        if (Number(shop.pending_orders) > 0) {
+          await shop.decrement(["pending_orders"], { by: 1 });
+        }
+      } catch (e) {
+        console.warn("Could not decrement pending_orders on cancel:", e?.message || e);
+      }
     }
 
     // Refund wallet if paid by wallet

@@ -9,6 +9,7 @@ const {
   getMyShop,
   getShopRequests,
   getMyShopRequest,
+  recalcMyShop,
 } = require("../controllers/shopController");
 
 const router = express.Router();
@@ -56,6 +57,12 @@ router.get(
   getMyShopRequest
 );
 router.get("/my-shop", authMiddleware, roleAuth(["florist"]), getMyShop);
+router.post(
+  "/my-shop/recalc",
+  authMiddleware,
+  roleAuth(["florist", "admin"]),
+  recalcMyShop
+);
 router.put(
   "/request/:id/approve",
   authMiddleware,
