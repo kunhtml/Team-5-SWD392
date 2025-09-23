@@ -218,7 +218,13 @@ const verifyDeposit = async (req, res) => {
 
     // Fetch transactions from Sepay
     const sepayData = await fetchSepayTransactions();
-    const list = Array.isArray(sepayData?.data) ? sepayData.data : Array.isArray(sepayData) ? sepayData : [];
+    const list = Array.isArray(sepayData?.transactions)
+      ? sepayData.transactions
+      : Array.isArray(sepayData?.data)
+      ? sepayData.data
+      : Array.isArray(sepayData)
+      ? sepayData
+      : [];
 
     // Helper to normalize strings: lowercase and remove non-alphanumeric (banks may drop '+', punctuation, etc.)
     const normalize = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -226,15 +232,13 @@ const verifyDeposit = async (req, res) => {
 
     // Normalize fields across possible keys and compare with normalized target
     const match = list.find((tx) => {
-      const rawDesc = tx.description || tx.des || tx.content || tx.note || "";
+      const rawDesc = tx.transaction_content || tx.description || tx.des || tx.content || tx.note || "";
       const descNorm = normalize(rawDesc);
-      const amt = Number(tx.amount || tx.money || tx.value || 0);
+      const amtIn = Number(tx.amount_in || 0);
       const okDesc = descNorm.includes(target);
-      const okAmt = amount ? Math.round(amt) === Math.round(Number(amount)) : true;
-      // Optionally check status if available
-      const status = tx.status || tx.state || 1; // assume 1 = success
-      const okStatus = String(status) === "1" || String(status).toLowerCase() === "success";
-      return okDesc && okAmt && okStatus;
+      const okAmt = amount ? Math.round(amtIn) === Math.round(Number(amount)) : true;
+      const okIncoming = amtIn > 0; // only consider incoming transactions
+      return okDesc && okAmt && okIncoming;
     });
 
     if (!match) {
@@ -242,13 +246,13 @@ const verifyDeposit = async (req, res) => {
     }
 
     // Idempotency: do not double-credit if we've already recorded this remote transaction
-    const refId = `sepay_${match.id || match.trans_id || match.code || match.reference || Date.now()}`;
+  const refId = `sepay_${match.id || match.reference_number || match.trans_id || match.code || match.reference || Date.now()}`;
     const existed = await WalletTransaction.findOne({ where: { wallet_id: wallet.id, reference_id: refId } });
     if (existed) {
       return res.json({ message: "Giao dịch đã được xác nhận trước đó", balance: wallet.balance });
     }
 
-    const creditAmount = Number(amount || match.amount || 0);
+  const creditAmount = Number(amount || match.amount_in || 0);
     if (!creditAmount || creditAmount <= 0) {
       return res.status(400).json({ message: "Số tiền giao dịch không hợp lệ" });
     }
