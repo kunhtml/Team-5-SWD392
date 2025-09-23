@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import {
   Box,
@@ -19,9 +19,11 @@ import {
   DialogContent,
   DialogActions,
   Divider,
+  TextField,
 } from "@mui/material";
 
 const FloristDashboard = () => {
+  const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
   const [shop, setShop] = useState(null);
   const [products, setProducts] = useState([]);
@@ -30,6 +32,15 @@ const FloristDashboard = () => {
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    description: "",
+    address: "",
+    phone: "",
+    email: "",
+    image_url: "",
+  });
 
   useEffect(() => {
     fetchFloristData();
@@ -63,6 +74,40 @@ const FloristDashboard = () => {
       setShop(res.data.shop);
     } catch (e) {
       console.error("Không thể tải lại thông tin cửa hàng:", e);
+    }
+  };
+
+  const openEditShop = () => {
+    if (!shop) return;
+    setEditForm({
+      name: shop.name || "",
+      description: shop.description || "",
+      address: shop.address || "",
+      phone: shop.phone || "",
+      email: shop.email || "",
+      image_url: shop.image_url || "",
+    });
+    setEditOpen(true);
+  };
+
+  const handleEditChange = (field) => (e) => {
+    setEditForm((prev) => ({ ...prev, [field]: e.target.value }));
+  };
+
+  const submitEditShop = async () => {
+    try {
+      if (!editForm.name.trim()) {
+        window.alert("Tên cửa hàng là bắt buộc");
+        return;
+      }
+      const payload = { ...editForm };
+      await api.put("/shops/my-shop", payload);
+      // Refresh and close
+      await refreshShopStats();
+      setEditOpen(false);
+    } catch (e) {
+      console.error("Cập nhật cửa hàng thất bại:", e);
+      window.alert("Không thể cập nhật thông tin cửa hàng. Vui lòng thử lại.");
     }
   };
 
@@ -184,14 +229,39 @@ const FloristDashboard = () => {
             >
               Làm mới
             </Button>
+            <Button
+              size="small"
+              sx={{ ml: 1 }}
+              variant="outlined"
+              onClick={openEditShop}
+            >
+              Chỉnh sửa thông tin
+            </Button>
           </Box>
         </Paper>
       )}
 
-      <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 4 }}>
-        <Tab label="Sản Phẩm" />
-        <Tab label="Đơn Hàng" />
-      </Tabs>
+      <Box
+        sx={{
+          mb: 4,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-start",
+        }}
+      >
+        <Tabs value={tabValue} onChange={handleTabChange}>
+          <Tab label="Sản Phẩm" />
+          <Tab label="Đơn Hàng" />
+        </Tabs>
+        <Button
+          size="small"
+          variant="contained"
+          sx={{ ml: 2 }}
+          onClick={() => navigate("/wallet/balance")}
+        >
+          Ví của tôi
+        </Button>
+      </Box>
 
       {tabValue === 0 && (
         <TableContainer component={Paper}>
@@ -365,6 +435,53 @@ const FloristDashboard = () => {
           <Button variant="contained" onClick={handleMarkDelivered} disabled={actionLoading}>
             Giao thành công
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit shop dialog */}
+      <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Chỉnh sửa thông tin cửa hàng</DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+            <TextField
+              label="Tên cửa hàng"
+              value={editForm.name}
+              onChange={handleEditChange("name")}
+              required
+            />
+            <TextField
+              label="Mô tả"
+              value={editForm.description}
+              onChange={handleEditChange("description")}
+              multiline
+              minRows={2}
+            />
+            <TextField
+              label="Địa chỉ"
+              value={editForm.address}
+              onChange={handleEditChange("address")}
+            />
+            <TextField
+              label="Số điện thoại"
+              value={editForm.phone}
+              onChange={handleEditChange("phone")}
+            />
+            <TextField
+              label="Email"
+              value={editForm.email}
+              onChange={handleEditChange("email")}
+            />
+            <TextField
+              label="Ảnh đại diện (URL)"
+              value={editForm.image_url}
+              onChange={handleEditChange("image_url")}
+              placeholder="https://..."
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditOpen(false)}>Hủy</Button>
+          <Button variant="contained" onClick={submitEditShop}>Lưu</Button>
         </DialogActions>
       </Dialog>
     </Box>
