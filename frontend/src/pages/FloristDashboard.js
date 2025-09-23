@@ -14,6 +14,11 @@ import {
   TableRow,
   Paper,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Divider,
 } from "@mui/material";
 
 const FloristDashboard = () => {
@@ -22,7 +27,9 @@ const FloristDashboard = () => {
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [updatingOrderId, setUpdatingOrderId] = useState(null);
+  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     fetchFloristData();
@@ -51,19 +58,47 @@ const FloristDashboard = () => {
     setTabValue(newValue);
   };
 
-  const handleProcessOrder = async (orderId) => {
+  const handleOpenOrderDialog = (order) => {
+    setSelectedOrder(order);
+    setOrderDialogOpen(true);
+  };
+
+  const handleCloseOrderDialog = () => {
+    setOrderDialogOpen(false);
+    setSelectedOrder(null);
+  };
+
+  const handleCancelOrder = async () => {
+    if (!selectedOrder) return;
     try {
-      setUpdatingOrderId(orderId);
-      await api.put(`/orders/${orderId}/status`, { status: "processing" });
-      // Optimistically update local state
+      setActionLoading(true);
+      await api.put(`/orders/${selectedOrder.id}/status`, { status: "cancelled" });
       setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, status: "processing" } : o))
+        prev.map((o) => (o.id === selectedOrder.id ? { ...o, status: "cancelled" } : o))
       );
+      handleCloseOrderDialog();
     } catch (err) {
-      console.error("Cập nhật trạng thái đơn hàng thất bại:", err);
-      window.alert("Không thể cập nhật trạng thái. Vui lòng thử lại.");
+      console.error("Hủy đơn thất bại:", err);
+      window.alert("Không thể hủy đơn. Vui lòng thử lại.");
     } finally {
-      setUpdatingOrderId(null);
+      setActionLoading(false);
+    }
+  };
+
+  const handleMarkDelivered = async () => {
+    if (!selectedOrder) return;
+    try {
+      setActionLoading(true);
+      await api.put(`/orders/${selectedOrder.id}/status`, { status: "delivered" });
+      setOrders((prev) =>
+        prev.map((o) => (o.id === selectedOrder.id ? { ...o, status: "delivered" } : o))
+      );
+      handleCloseOrderDialog();
+    } catch (err) {
+      console.error("Cập nhật giao thành công thất bại:", err);
+      window.alert("Không thể cập nhật giao thành công. Vui lòng thử lại.");
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -191,11 +226,7 @@ const FloristDashboard = () => {
                   </TableCell>
                   <TableCell>{order.status}</TableCell>
                   <TableCell>
-                    <Button
-                      size="small"
-                      disabled={updatingOrderId === order.id || order.status !== "pending"}
-                      onClick={() => handleProcessOrder(order.id)}
-                    >
+                    <Button size="small" onClick={() => handleOpenOrderDialog(order)}>
                       Xử Lý
                     </Button>
                   </TableCell>
@@ -205,6 +236,68 @@ const FloristDashboard = () => {
           </Table>
         </TableContainer>
       )}
+
+      {/* Order processing dialog */}
+      <Dialog open={orderDialogOpen} onClose={handleCloseOrderDialog} maxWidth="md" fullWidth>
+        <DialogTitle>Chi Tiết Đơn Hàng #{selectedOrder?.id}</DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ mb: 2 }}>
+            <Typography>
+              Người mua: <strong>{selectedOrder?.customer?.name || ""}</strong>
+            </Typography>
+            <Typography>
+              SĐT: <strong>{selectedOrder?.customer?.phone || ""}</strong>
+            </Typography>
+            <Typography>
+              Địa chỉ giao hàng: <strong>{selectedOrder?.shipping_address || ""}</strong>
+            </Typography>
+          </Box>
+          <Divider sx={{ mb: 2 }} />
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Tên sản phẩm</TableCell>
+                <TableCell align="right">Đơn giá</TableCell>
+                <TableCell align="right">Số lượng</TableCell>
+                <TableCell align="right">Thành tiền</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {(selectedOrder?.items || []).map((it) => (
+                <TableRow key={it.id}>
+                  <TableCell>{it.product?.name}</TableCell>
+                  <TableCell align="right">
+                    {parseFloat(it.price).toLocaleString("vi-VN")}
+                  </TableCell>
+                  <TableCell align="right">{it.quantity}</TableCell>
+                  <TableCell align="right">
+                    {parseFloat(it.price * it.quantity).toLocaleString("vi-VN")}
+                  </TableCell>
+                </TableRow>
+              ))}
+              <TableRow>
+                <TableCell colSpan={3} align="right">
+                  <strong>Tổng cộng</strong>
+                </TableCell>
+                <TableCell align="right">
+                  <strong>
+                    {parseFloat(selectedOrder?.total_amount || 0).toLocaleString("vi-VN")} VNĐ
+                  </strong>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseOrderDialog} disabled={actionLoading}>Đóng</Button>
+          <Button color="error" onClick={handleCancelOrder} disabled={actionLoading}>
+            Hủy đơn
+          </Button>
+          <Button variant="contained" onClick={handleMarkDelivered} disabled={actionLoading}>
+            Giao thành công
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
