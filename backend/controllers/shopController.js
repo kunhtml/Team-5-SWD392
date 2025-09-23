@@ -256,6 +256,25 @@ const getShopRequests = async (req, res) => {
   }
 };
 
+// Get current user's latest/pending shop request (customer)
+const getMyShopRequest = async (req, res) => {
+  try {
+    if (req.user.role !== "customer") {
+      return res.status(403).json({ message: "Only customers can view their shop request" });
+    }
+
+    const latest = await ShopRequest.findOne({
+      where: { user_id: req.user.id },
+      order: [["createdAt", "DESC"]],
+    });
+
+    res.json({ request: latest });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   getAllShops,
   getShopById,
@@ -263,4 +282,5 @@ module.exports = {
   approveShopRequest,
   getMyShop,
   getShopRequests, // Added export
+  getMyShopRequest,
 };
