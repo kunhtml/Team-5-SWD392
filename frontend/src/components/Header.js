@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   AppBar,
   Toolbar,
@@ -7,6 +7,9 @@ import {
   Box,
   IconButton,
   Badge,
+  Menu,
+  MenuItem,
+  Divider,
 } from "@mui/material";
 import { ShoppingCart, AccountCircle } from "@mui/icons-material";
 import { useSelector, useDispatch } from "react-redux";
@@ -22,11 +25,16 @@ const Header = () => {
   );
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [anchorEl, setAnchorEl] = useState(null);
+  const open = Boolean(anchorEl);
 
   const handleLogout = () => {
     dispatch(logout());
     navigate("/");
   };
+
+  const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
+  const handleMenuClose = () => setAnchorEl(null);
 
   return (
     <AppBar position="static" color="primary">
@@ -59,29 +67,56 @@ const Header = () => {
                 </IconButton>
               </Badge>
 
-              <Button color="inherit" component={Link} to="/wallet/balance">
-                Ví
+              <Button
+                color="inherit"
+                startIcon={<AccountCircle />}
+                onClick={handleMenuOpen}
+                aria-controls={open ? "user-menu" : undefined}
+                aria-haspopup="true"
+                aria-expanded={open ? "true" : undefined}
+              >
+                {user.name || user.email}
               </Button>
 
-              <Button color="inherit" onClick={handleLogout}>
-                Đăng Xuất ({user.role})
-              </Button>
-
-              {user.role === "admin" && (
-                <Button color="inherit" component={Link} to="/admin">
-                  Admin
-                </Button>
-              )}
-              {user.role === "florist" && (
-                <Button color="inherit" component={Link} to="/florist">
-                  Cửa Hàng
-                </Button>
-              )}
-              {user.role === "customer" && (
-                <Button color="inherit" component={Link} to="/shop-request">
-                  Mở Cửa Hàng
-                </Button>
-              )}
+              <Menu
+                id="user-menu"
+                anchorEl={anchorEl}
+                open={open}
+                onClose={handleMenuClose}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                transformOrigin={{ vertical: "top", horizontal: "right" }}
+              >
+                <MenuItem component={Link} to="/orders" onClick={handleMenuClose}>
+                  Đơn hàng của tôi
+                </MenuItem>
+                <MenuItem component={Link} to="/wallet/balance" onClick={handleMenuClose}>
+                  Ví
+                </MenuItem>
+                {user.role === "admin" && (
+                  <MenuItem component={Link} to="/admin" onClick={handleMenuClose}>
+                    Admin
+                  </MenuItem>
+                )}
+                {user.role === "florist" && (
+                  <MenuItem component={Link} to="/florist" onClick={handleMenuClose}>
+                    Cửa hàng của tôi
+                  </MenuItem>
+                )}
+                {user.role === "customer" && (
+                  <MenuItem component={Link} to="/shop-request" onClick={handleMenuClose}>
+                    Mở cửa hàng
+                  </MenuItem>
+                )}
+                <Divider />
+                <MenuItem
+                  onClick={() => {
+                    handleMenuClose();
+                    handleLogout();
+                  }}
+                >
+                  Đăng xuất
+                </MenuItem>
+              </Menu>
             </>
           ) : (
             <>
