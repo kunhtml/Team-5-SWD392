@@ -35,6 +35,8 @@ const WalletTransaction = sequelize.define(
   {
     tableName: "wallet_transactions",
     timestamps: true,
+    createdAt: "created_at",
+    updatedAt: false,
   }
 );
 
