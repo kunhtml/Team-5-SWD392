@@ -30,6 +30,7 @@ const Orders = () => {
   const [pages, setPages] = useState(1);
   const [status, setStatus] = useState("");
   const [selected, setSelected] = useState(null);
+  const [shipEdit, setShipEdit] = useState("");
 
   useEffect(() => {
     fetchOrders({ page, status });
@@ -93,7 +94,10 @@ const Orders = () => {
                 <TableCell>{order.id}</TableCell>
                 <TableCell>{order.shop?.name}</TableCell>
                 <TableCell>
-                  {new Date(order.created_at).toLocaleDateString("vi-VN")}
+                  {(() => {
+                    const d = order.createdAt || order.created_at;
+                    return d ? new Date(d).toLocaleDateString("vi-VN") : "-";
+                  })()}
                 </TableCell>
                 <TableCell>
                   {parseFloat(order.total_amount).toLocaleString("vi-VN", {
@@ -117,7 +121,14 @@ const Orders = () => {
                 </TableCell>
                 <TableCell>
                   <Stack direction="row" spacing={1}>
-                    <Button size="small" variant="outlined" onClick={() => setSelected(order)}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        setSelected(order);
+                        setShipEdit(order.shipping_address || "");
+                      }}
+                    >
                       Chi Tiết
                     </Button>
                     {(order.status === "pending" || order.status === "processing") && (
@@ -159,6 +170,20 @@ const Orders = () => {
                 Tổng tiền: {parseFloat(selected.total_amount).toLocaleString("vi-VN")} VNĐ
               </Typography>
               <Typography>Trạng thái: {selected.status}</Typography>
+              {(selected.status === "pending" || selected.status === "processing") ? (
+                <Box sx={{ mt: 2 }}>
+                  <TextField
+                    label="Địa chỉ giao hàng"
+                    fullWidth
+                    multiline
+                    minRows={2}
+                    value={shipEdit}
+                    onChange={(e) => setShipEdit(e.target.value)}
+                  />
+                </Box>
+              ) : (
+                <Typography sx={{ mt: 2 }}>Địa chỉ: {selected.shipping_address}</Typography>
+              )}
               <Typography sx={{ mt: 2 }}>Sản phẩm:</Typography>
               <ul>
                 {(selected.items || []).map((it) => (
@@ -172,6 +197,22 @@ const Orders = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSelected(null)}>Đóng</Button>
+          {selected && (selected.status === "pending" || selected.status === "processing") && (
+            <Button
+              variant="contained"
+              onClick={async () => {
+                try {
+                  await api.put(`/orders/${selected.id}/shipping`, { shipping_address: shipEdit });
+                  setSelected(null);
+                  fetchOrders({ page, status });
+                } catch (e) {
+                  console.error(e);
+                }
+              }}
+            >
+              Lưu địa chỉ
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>
