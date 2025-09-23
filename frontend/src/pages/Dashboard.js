@@ -13,16 +13,20 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  CircularProgress,
+  Avatar,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { fetchUserFromToken } from "../store/slices/authSlice";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
 const Dashboard = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const [editOpen, setEditOpen] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", address: "", avatar_url: "" });
+  const [uploading, setUploading] = useState(false);
   const navigate = useNavigate();
 
   if (!user) {
@@ -111,6 +115,15 @@ const Dashboard = () => {
           <Card>
             <CardContent>
               <Typography variant="h6">Thông Tin Cá Nhân</Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+                <Avatar
+                  src={user.avatar_url || undefined}
+                  alt={user.name}
+                  sx={{ width: 72, height: 72 }}
+                >
+                  {(!user.avatar_url && user.name) ? user.name.charAt(0).toUpperCase() : null}
+                </Avatar>
+              </Box>
               <Typography>Email: {user.email}</Typography>
               <Typography>SĐT: {user.phone || "Chưa cập nhật"}</Typography>
               <Typography>
@@ -181,6 +194,56 @@ const Dashboard = () => {
             onChange={(e) => setForm({ ...form, avatar_url: e.target.value })}
             placeholder="https://..."
           />
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Button
+              variant="outlined"
+              component="label"
+              size="small"
+            >
+              Chọn ảnh từ máy
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={async (e) => {
+                  try {
+                    setUploading(true);
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const imgbbKey = process.env.REACT_APP_IMGBB_KEY;
+                    if (!imgbbKey) {
+                      window.alert("Thiếu REACT_APP_IMGBB_KEY trong env");
+                      return;
+                    }
+                    const fd = new FormData();
+                    fd.append("key", imgbbKey);
+                    fd.append("image", file);
+                    const res = await fetch("https://api.imgbb.com/1/upload", {
+                      method: "POST",
+                      body: fd,
+                    });
+                    const data = await res.json();
+                    if (!data?.success) {
+                      console.error("ImgBB upload failed:", data);
+                      window.alert("Upload ảnh thất bại");
+                      return;
+                    }
+                    const url = data.data?.url; // or display_url
+                    if (url) setForm((prev) => ({ ...prev, avatar_url: url }));
+                  } catch (err) {
+                    console.error("Upload ảnh lỗi:", err);
+                    window.alert("Không thể upload ảnh. Vui lòng thử lại.");
+                  } finally {
+                    setUploading(false);
+                  }
+                }}
+              />
+            </Button>
+            {uploading && <CircularProgress size={18} />}
+            {!uploading && !!form.avatar_url && (
+              <CheckCircleIcon fontSize="small" sx={{ color: "success.main" }} />
+            )}
+          </Box>
         </Box>
       </DialogContent>
       <DialogActions>
