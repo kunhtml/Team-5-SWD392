@@ -10,6 +10,7 @@ const {
   getShopRequests,
   getMyShopRequest,
   recalcMyShop,
+  updateMyShop,
 } = require("../controllers/shopController");
 
 const router = express.Router();
@@ -57,6 +58,7 @@ router.get(
   getMyShopRequest
 );
 router.get("/my-shop", authMiddleware, roleAuth(["florist"]), getMyShop);
+router.put("/my-shop", authMiddleware, roleAuth(["florist"]), updateMyShop);
 router.post(
   "/my-shop/recalc",
   authMiddleware,
