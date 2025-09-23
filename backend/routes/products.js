@@ -7,6 +7,9 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
+  getMyProducts,
+  getProductsForModeration,
+  moderateProduct,
 } = require("../controllers/productController");
 
 const router = express.Router();
@@ -35,9 +38,31 @@ const upload = multer({
 
 // Public routes
 router.get("/", getAllProducts);
-router.get("/:id", getProductById);
 
-// Protected routes
+// Protected routes (place specific paths BEFORE dynamic ":id")
+router.get(
+  "/mine",
+  authMiddleware,
+  roleAuth(["florist", "admin"]),
+  getMyProducts
+);
+
+// Admin moderation endpoints
+router.get(
+  "/moderation",
+  authMiddleware,
+  roleAuth(["admin"]),
+  getProductsForModeration
+);
+router.put(
+  "/:id/moderate",
+  authMiddleware,
+  roleAuth(["admin"]),
+  moderateProduct
+);
+
+// Public dynamic route placed last to avoid catching "/mine"
+router.get("/:id", getProductById);
 router.post(
   "/",
   authMiddleware,
