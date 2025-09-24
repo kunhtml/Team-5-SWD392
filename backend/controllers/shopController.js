@@ -205,7 +205,8 @@ const updateMyShop = async (req, res) => {
     const shop = await Shop.findOne({ where: { florist_id: req.user.id } });
     if (!shop) return res.status(404).json({ message: "No shop found" });
 
-    const { name, description, address, phone, email, image_url } = req.body || {};
+    const { name, description, address, phone, email, image_url } =
+      req.body || {};
 
     const updates = {};
     if (name !== undefined) updates.name = String(name).trim();
@@ -324,12 +325,33 @@ module.exports = {
 // ====== Utilities to recalculate shop stats from orders ======
 async function recalcShopStats(shopId) {
   // Count orders by status groups and sum revenue for completed/delivered
-  const [completedCount, cancelledCount, pendingCount, revenueSum] = await Promise.all([
-    Order.count({ where: { shop_id: shopId, status: { [Op.in]: ["completed", "delivered"] } } }),
-    Order.count({ where: { shop_id: shopId, status: { [Op.in]: ["cancelled", "rejected"] } } }),
-    Order.count({ where: { shop_id: shopId, status: { [Op.in]: ["pending", "processing"] } } }),
-    Order.sum("total_amount", { where: { shop_id: shopId, status: { [Op.in]: ["completed", "delivered"] } } }),
-  ]);
+  const [completedCount, cancelledCount, pendingCount, revenueSum] =
+    await Promise.all([
+      Order.count({
+        where: {
+          shop_id: shopId,
+          status: { [Op.in]: ["completed", "delivered"] },
+        },
+      }),
+      Order.count({
+        where: {
+          shop_id: shopId,
+          status: { [Op.in]: ["cancelled", "rejected"] },
+        },
+      }),
+      Order.count({
+        where: {
+          shop_id: shopId,
+          status: { [Op.in]: ["pending", "processing"] },
+        },
+      }),
+      Order.sum("total_amount", {
+        where: {
+          shop_id: shopId,
+          status: { [Op.in]: ["completed", "delivered"] },
+        },
+      }),
+    ]);
 
   const totalRevenue = Number(revenueSum || 0);
   await Shop.update(

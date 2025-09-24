@@ -242,13 +242,15 @@ const updateOrderStatus = async (req, res) => {
         try {
           if (
             order.payment_method === "wallet" &&
-            (order.payment_status === "paid" || order.payment_status === "captured")
+            (order.payment_status === "paid" ||
+              order.payment_status === "captured")
           ) {
             const sellerWallet = await Wallet.findOne({
               where: { user_id: shop.florist_id },
             });
             const ensureWallet = async () =>
-              sellerWallet || (await Wallet.create({ user_id: shop.florist_id, balance: 0.0 }));
+              sellerWallet ||
+              (await Wallet.create({ user_id: shop.florist_id, balance: 0.0 }));
             const walletToUse = await ensureWallet();
             const existedCredit = await WalletTransaction.findOne({
               where: {
@@ -257,7 +259,8 @@ const updateOrderStatus = async (req, res) => {
               },
             });
             if (!existedCredit) {
-              const newBalance = Number(walletToUse.balance) + Number(order.total_amount);
+              const newBalance =
+                Number(walletToUse.balance) + Number(order.total_amount);
               await walletToUse.update({ balance: newBalance });
               await WalletTransaction.create({
                 wallet_id: walletToUse.id,
@@ -328,7 +331,8 @@ const updateOrderStatus = async (req, res) => {
                 },
               });
               if (existedCredit && !existedReversal) {
-                const newBalance = Number(sellerWallet.balance) - Number(order.total_amount);
+                const newBalance =
+                  Number(sellerWallet.balance) - Number(order.total_amount);
                 await sellerWallet.update({ balance: newBalance });
                 await WalletTransaction.create({
                   wallet_id: sellerWallet.id,
@@ -417,12 +421,9 @@ const cancelOrder = async (req, res) => {
 
     // Only allow cancel when pending or processing
     if (!["pending", "processing"].includes(order.status)) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Chỉ có thể hủy đơn ở trạng thái 'pending' hoặc 'processing'",
-        });
+      return res.status(400).json({
+        message: "Chỉ có thể hủy đơn ở trạng thái 'pending' hoặc 'processing'",
+      });
     }
 
     // Update order status
@@ -437,7 +438,10 @@ const cancelOrder = async (req, res) => {
           await shop.decrement(["pending_orders"], { by: 1 });
         }
       } catch (e) {
-        console.warn("Could not decrement pending_orders on cancel:", e?.message || e);
+        console.warn(
+          "Could not decrement pending_orders on cancel:",
+          e?.message || e
+        );
       }
     }
 
@@ -480,7 +484,8 @@ const cancelOrder = async (req, res) => {
               },
             });
             if (existedCredit && !existedReversal) {
-              const newBalance = Number(sellerWallet.balance) - Number(order.total_amount);
+              const newBalance =
+                Number(sellerWallet.balance) - Number(order.total_amount);
               await sellerWallet.update({ balance: newBalance });
               await WalletTransaction.create({
                 wallet_id: sellerWallet.id,

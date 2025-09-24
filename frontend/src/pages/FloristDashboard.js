@@ -21,7 +21,9 @@ import {
   Divider,
   TextField,
   Avatar,
+  CircularProgress,
 } from "@mui/material";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
 const FloristDashboard = () => {
   const navigate = useNavigate();
@@ -42,6 +44,7 @@ const FloristDashboard = () => {
     email: "",
     image_url: "",
   });
+  const [uploadingShopImg, setUploadingShopImg] = useState(false);
 
   useEffect(() => {
     fetchFloristData();
@@ -95,6 +98,39 @@ const FloristDashboard = () => {
     setEditForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
+  const handleShopImageFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const key = process.env.REACT_APP_IMGBB_KEY;
+    if (!key) {
+      window.alert("Thiếu REACT_APP_IMGBB_KEY trong frontend .env");
+      return;
+    }
+    setUploadingShopImg(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${key}`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      const url = data?.data?.url;
+      if (url) {
+        setEditForm((prev) => ({ ...prev, image_url: url }));
+      } else {
+        throw new Error("Upload thất bại");
+      }
+    } catch (err) {
+      console.error("Upload ảnh cửa hàng lỗi:", err);
+      window.alert("Không thể tải ảnh lên. Vui lòng thử lại.");
+    } finally {
+      setUploadingShopImg(false);
+      // reset file input value to allow re-selecting same file
+      e.target.value = "";
+    }
+  };
+
   const submitEditShop = async () => {
     try {
       if (!editForm.name.trim()) {
@@ -140,9 +176,13 @@ const FloristDashboard = () => {
     if (!selectedOrder) return;
     try {
       setActionLoading(true);
-      await api.put(`/orders/${selectedOrder.id}/status`, { status: "cancelled" });
+      await api.put(`/orders/${selectedOrder.id}/status`, {
+        status: "cancelled",
+      });
       setOrders((prev) =>
-        prev.map((o) => (o.id === selectedOrder.id ? { ...o, status: "cancelled" } : o))
+        prev.map((o) =>
+          o.id === selectedOrder.id ? { ...o, status: "cancelled" } : o
+        )
       );
       await refreshShopStats();
       handleCloseOrderDialog();
@@ -158,9 +198,13 @@ const FloristDashboard = () => {
     if (!selectedOrder) return;
     try {
       setActionLoading(true);
-      await api.put(`/orders/${selectedOrder.id}/status`, { status: "completed" });
+      await api.put(`/orders/${selectedOrder.id}/status`, {
+        status: "completed",
+      });
       setOrders((prev) =>
-        prev.map((o) => (o.id === selectedOrder.id ? { ...o, status: "completed" } : o))
+        prev.map((o) =>
+          o.id === selectedOrder.id ? { ...o, status: "completed" } : o
+        )
       );
       await refreshShopStats();
       handleCloseOrderDialog();
@@ -193,7 +237,9 @@ const FloristDashboard = () => {
       {shop && (
         <Paper sx={{ p: 3, mb: 4 }}>
           <Typography variant="h6">Thông Tin Cửa Hàng</Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1, mb: 2 }}>
+          <Box
+            sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1, mb: 2 }}
+          >
             <Avatar
               src={shop.image_url || undefined}
               alt={shop.name || "Shop"}
@@ -374,11 +420,15 @@ const FloristDashboard = () => {
                     {parseFloat(order.total_amount).toLocaleString("vi-VN", {
                       minimumFractionDigits: 0,
                       maximumFractionDigits: 2,
-                    })} VNĐ
+                    })}{" "}
+                    VNĐ
                   </TableCell>
                   <TableCell>{order.status}</TableCell>
                   <TableCell>
-                    <Button size="small" onClick={() => handleOpenOrderDialog(order)}>
+                    <Button
+                      size="small"
+                      onClick={() => handleOpenOrderDialog(order)}
+                    >
                       Xử Lý
                     </Button>
                   </TableCell>
@@ -390,7 +440,12 @@ const FloristDashboard = () => {
       )}
 
       {/* Order processing dialog */}
-      <Dialog open={orderDialogOpen} onClose={handleCloseOrderDialog} maxWidth="md" fullWidth>
+      <Dialog
+        open={orderDialogOpen}
+        onClose={handleCloseOrderDialog}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>Chi Tiết Đơn Hàng #{selectedOrder?.id}</DialogTitle>
         <DialogContent dividers>
           <Box sx={{ mb: 2 }}>
@@ -401,7 +456,8 @@ const FloristDashboard = () => {
               SĐT: <strong>{selectedOrder?.customer?.phone || ""}</strong>
             </Typography>
             <Typography>
-              Địa chỉ giao hàng: <strong>{selectedOrder?.shipping_address || ""}</strong>
+              Địa chỉ giao hàng:{" "}
+              <strong>{selectedOrder?.shipping_address || ""}</strong>
             </Typography>
           </Box>
           <Divider sx={{ mb: 2 }} />
@@ -433,7 +489,10 @@ const FloristDashboard = () => {
                 </TableCell>
                 <TableCell align="right">
                   <strong>
-                    {parseFloat(selectedOrder?.total_amount || 0).toLocaleString("vi-VN")} VNĐ
+                    {parseFloat(
+                      selectedOrder?.total_amount || 0
+                    ).toLocaleString("vi-VN")}{" "}
+                    VNĐ
                   </strong>
                 </TableCell>
               </TableRow>
@@ -441,18 +500,33 @@ const FloristDashboard = () => {
           </Table>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseOrderDialog} disabled={actionLoading}>Đóng</Button>
-          <Button color="error" onClick={handleCancelOrder} disabled={actionLoading}>
+          <Button onClick={handleCloseOrderDialog} disabled={actionLoading}>
+            Đóng
+          </Button>
+          <Button
+            color="error"
+            onClick={handleCancelOrder}
+            disabled={actionLoading}
+          >
             Hủy đơn
           </Button>
-          <Button variant="contained" onClick={handleMarkDelivered} disabled={actionLoading}>
+          <Button
+            variant="contained"
+            onClick={handleMarkDelivered}
+            disabled={actionLoading}
+          >
             Giao thành công
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Edit shop dialog */}
-      <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Chỉnh sửa thông tin cửa hàng</DialogTitle>
         <DialogContent dividers>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
@@ -484,17 +558,50 @@ const FloristDashboard = () => {
               value={editForm.email}
               onChange={handleEditChange("email")}
             />
-            <TextField
-              label="Ảnh đại diện (URL)"
-              value={editForm.image_url}
-              onChange={handleEditChange("image_url")}
-              placeholder="https://..."
-            />
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <input
+                id="shop-avatar-file"
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={handleShopImageFileChange}
+              />
+              <label htmlFor="shop-avatar-file">
+                <Button variant="outlined" component="span" size="small">
+                  Chọn ảnh từ máy
+                </Button>
+              </label>
+              {uploadingShopImg ? (
+                <CircularProgress size={20} />
+              ) : editForm.image_url ? (
+                <CheckCircleIcon color="success" fontSize="small" />
+              ) : null}
+            </Box>
+            {editForm.image_url && (
+              <Box
+                sx={{ mt: 1, display: "flex", alignItems: "center", gap: 2 }}
+              >
+                <Avatar
+                  src={editForm.image_url}
+                  alt="Shop avatar preview"
+                  sx={{ width: 56, height: 56 }}
+                />
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ wordBreak: "break-all" }}
+                >
+                  {editForm.image_url}
+                </Typography>
+              </Box>
+            )}
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditOpen(false)}>Hủy</Button>
-          <Button variant="contained" onClick={submitEditShop}>Lưu</Button>
+          <Button variant="contained" onClick={submitEditShop}>
+            Lưu
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
