@@ -22,6 +22,7 @@ import FloristProducts from "./pages/FloristProducts";
 import AdminUserEdit from "./pages/AdminUserEdit";
 import ShopDetail from "./pages/ShopDetail";
 import WalletBalance from "./pages/WalletBalance";
+import About from "./pages/About";
 
 function App() {
   const dispatch = useDispatch();
@@ -53,6 +54,7 @@ function App() {
       <Header />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/products" element={<Products />} />

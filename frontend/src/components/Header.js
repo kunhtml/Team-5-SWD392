@@ -52,6 +52,9 @@ const Header = () => {
           <Button color="inherit" component={Link} to="/products">
             Sản Phẩm
           </Button>
+          <Button color="inherit" component={Link} to="/about">
+            Về chúng tôi
+          </Button>
 
           {user ? (
             <>
