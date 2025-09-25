@@ -7,6 +7,7 @@ const {
   updateOrderStatus,
   getShopOrders,
   updateShippingAddress,
+  getSpecialOrders, // Import the new function
 } = require("../controllers/orderController");
 
 const router = express.Router();
@@ -25,6 +26,13 @@ router.get(
   authMiddleware,
   roleAuth(["florist", "admin"]),
   getShopOrders
+);
+// Special orders endpoint for florists and admins
+router.get(
+  "/special",
+  authMiddleware,
+  roleAuth(["florist", "admin", "customer"]),
+  getSpecialOrders
 );
 router.get(
   "/:id",

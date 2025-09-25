@@ -7,6 +7,7 @@ const {
   getTransactions,
   getWithdrawalRequests,
   processWithdrawal,
+  depositToWallet, // Import the new function
 } = require("../controllers/walletController");
 const { sepayTransactionsDebug } = require("../controllers/walletController");
 
@@ -19,6 +20,13 @@ router.post(
   authMiddleware,
   roleAuth(["customer", "florist"]),
   deposit
+);
+// Admin-only route to deposit to specific wallet
+router.post(
+  "/:walletId/deposit",
+  authMiddleware,
+  roleAuth(["admin"]),
+  depositToWallet
 );
 router.get("/transactions", authMiddleware, getTransactions);
 router.get(

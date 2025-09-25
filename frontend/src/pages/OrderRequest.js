@@ -25,6 +25,7 @@ const OrderRequest = () => {
     budget: "",
     quantity: 1,
     deliveryDate: "",
+    shippingAddress: "",
     additionalNotes: "",
   });
   const [loading, setLoading] = useState(false);
@@ -69,6 +70,7 @@ const OrderRequest = () => {
         budget: "",
         quantity: 1,
         deliveryDate: "",
+        shippingAddress: "",
         additionalNotes: "",
       });
     } catch (error) {
@@ -88,9 +90,18 @@ const OrderRequest = () => {
 
   return (
     <Box sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Yêu Cầu Đặt Hàng Đặc Biệt
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4" gutterBottom>
+          Yêu Cầu Đặt Hàng Đặc Biệt
+        </Typography>
+        <Button 
+          variant="outlined" 
+          onClick={() => navigate("/special-order-history")}
+          sx={{ height: 'fit-content' }}
+        >
+          Đơn Đã Tạo
+        </Button>
+      </Box>
       
       <Paper sx={{ p: 4 }}>
         <Typography variant="body1" sx={{ mb: 3 }}>
@@ -173,12 +184,24 @@ const OrderRequest = () => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
+                label="Địa chỉ nhận hàng"
+                multiline
+                rows={2}
+                value={form.shippingAddress}
+                onChange={handleChange("shippingAddress")}
+                required
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
                 label="Ghi chú bổ sung"
                 multiline
                 rows={2}
                 value={form.additionalNotes}
                 onChange={handleChange("additionalNotes")}
-                helperText="Thông tin liên hệ, địa chỉ giao hàng, hoặc yêu cầu đặc biệt khác"
+                helperText="Yêu cầu đặc biệt khác (nếu có)"
               />
             </Grid>
             

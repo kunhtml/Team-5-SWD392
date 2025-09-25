@@ -61,6 +61,16 @@ const Header = () => {
               Đặt Hàng
             </Button>
           )}
+          {user && user.role === "florist" && (
+            <Button color="inherit" component={Link} to="/florist/special-orders">
+              Đơn Đặc Biệt
+            </Button>
+          )}
+          {user && user.role === "admin" && (
+            <Button color="inherit" component={Link} to="/admin/special-orders">
+              Đơn Đặc Biệt
+            </Button>
+          )}
 
           {user ? (
             <>

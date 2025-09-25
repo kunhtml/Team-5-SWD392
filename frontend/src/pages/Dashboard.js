@@ -172,6 +172,14 @@ const Dashboard = () => {
                       Mở Cửa Hàng
                     </Button>
                   )}
+                  {user.role === "customer" && (
+                    <Button
+                      variant="outlined"
+                      onClick={() => navigate("/special-order-history")}
+                    >
+                      Đơn Đặc Biệt Đã Tạo
+                    </Button>
+                  )}
                 </Box>
               </CardContent>
             </Card>

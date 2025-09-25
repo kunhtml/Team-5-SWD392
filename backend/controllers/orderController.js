@@ -542,6 +542,84 @@ const updateShippingAddress = async (req, res) => {
   }
 };
 
+// Get special orders (for florists and admins)
+const getSpecialOrders = async (req, res) => {
+  try {
+    // Only florists, admins, and customers can access special orders
+    if (req.user.role !== "florist" && req.user.role !== "admin" && req.user.role !== "customer") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const { page = 1, limit = 10, status } = req.query;
+    const offset = (page - 1) * limit;
+
+    // Build where clause
+    const where = {
+      is_special_order: 1, // Only special orders
+    };
+
+    // For florists, only show orders for their shop
+    if (req.user.role === "florist") {
+      const shop = await Shop.findOne({ where: { florist_id: req.user.id } });
+      if (!shop) {
+        return res.json({
+          orders: [],
+          total: 0,
+          page: parseInt(page),
+          pages: 0,
+        });
+      }
+      where.shop_id = shop.id;
+    }
+    // For customers, only show their own orders
+    else if (req.user.role === "customer") {
+      where.user_id = req.user.id;
+    }
+
+    // Add status filter if provided
+    if (status) where.status = status;
+
+    const { count, rows } = await Order.findAndCountAll({
+      where,
+      include: [
+        { model: User, as: "customer", attributes: ["id", "name"] },
+        { 
+          model: Shop, 
+          as: "shop", 
+          attributes: ["id", "name", "florist_id"],
+          include: [
+            { model: User, as: "florist", attributes: ["id"] }
+          ]
+        },
+        {
+          model: OrderItem,
+          as: "items",
+          include: [
+            {
+              model: Product,
+              as: "product",
+              attributes: ["id", "name"],
+            },
+          ],
+        },
+      ],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [["createdAt", "DESC"]],
+    });
+
+    res.json({
+      orders: rows,
+      total: count,
+      page: parseInt(page),
+      pages: Math.ceil(count / limit),
+    });
+  } catch (error) {
+    console.error("Error fetching special orders:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   createOrder,
   getUserOrders,
@@ -550,4 +628,5 @@ module.exports = {
   getShopOrders,
   cancelOrder,
   updateShippingAddress,
+  getSpecialOrders, // Add the new function to exports
 };

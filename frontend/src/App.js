@@ -18,8 +18,11 @@ import ShopRequest from "./pages/ShopRequest";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminPosts from "./pages/AdminPosts";
+import AdminSpecialOrders from "./pages/AdminSpecialOrders";
 import FloristDashboard from "./pages/FloristDashboard";
 import FloristProducts from "./pages/FloristProducts";
+import SpecialOrders from "./pages/SpecialOrders";
+import SpecialOrderHistory from "./pages/SpecialOrderHistory";
 import AdminUserEdit from "./pages/AdminUserEdit";
 import ShopDetail from "./pages/ShopDetail";
 import WalletBalance from "./pages/WalletBalance";
@@ -134,6 +137,14 @@ function App() {
           }
         />
         <Route
+          path="/admin/special-orders"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <AdminSpecialOrders />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/florist"
           element={
             <ProtectedRoute roles={["florist"]}>
@@ -146,6 +157,22 @@ function App() {
           element={
             <ProtectedRoute roles={["florist", "admin"]}>
               <FloristProducts />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/florist/special-orders"
+          element={
+            <ProtectedRoute roles={["florist"]}>
+              <SpecialOrders />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/special-order-history"
+          element={
+            <ProtectedRoute roles={["customer"]} >
+              <SpecialOrderHistory />
             </ProtectedRoute>
           }
         />

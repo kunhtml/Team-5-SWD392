@@ -152,8 +152,11 @@ const AdminDashboard = () => {
         Admin Dashboard
       </Typography>
       <Box sx={{ mb: 2 }}>
-        <Button variant="contained" onClick={() => navigate("/admin/posts")}>
+        <Button variant="contained" onClick={() => navigate("/admin/posts")} sx={{ mr: 2 }}>
           Quản lý bài đăng
+        </Button>
+        <Button variant="contained" onClick={() => navigate("/admin/special-orders")}>
+          Quản lý đơn đặc biệt
         </Button>
       </Box>
 

@@ -384,6 +384,52 @@ const sepayTransactionsDebug = async (req, res) => {
   }
 };
 
+// Admin-only function to deposit money into a specific wallet (for order completions)
+const depositToWallet = async (req, res) => {
+  try {
+    // Only admins can use this function
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const { walletId } = req.params;
+    const { amount, description } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ message: "Invalid amount" });
+    }
+
+    const wallet = await Wallet.findByPk(walletId);
+    if (!wallet) {
+      return res.status(404).json({ message: "Wallet not found" });
+    }
+
+    const newBalance = Number(wallet.balance) + Number(amount);
+
+    // Update wallet balance
+    await wallet.update({ balance: newBalance });
+
+    // Create transaction record
+    const transaction = await WalletTransaction.create({
+      wallet_id: wallet.id,
+      type: "deposit",
+      amount: Number(amount),
+      description: description || `Admin deposit to wallet #${walletId}`,
+      balance_after: newBalance,
+      reference_id: `admin_deposit_${Date.now()}_${walletId}`,
+    });
+
+    res.json({
+      message: "Deposit successful",
+      balance: newBalance,
+      transaction,
+    });
+  } catch (error) {
+    console.error("depositToWallet error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   getWalletBalance,
   deposit,
@@ -393,4 +439,5 @@ module.exports = {
   processWithdrawal,
   verifyDeposit,
   sepayTransactionsDebug,
+  depositToWallet, // Add the new function to exports
 };
