@@ -24,6 +24,12 @@ const ProtectedRoute = ({ children, roles = [] }) => {
   }
 
   if (roles.length > 0 && !roles.includes(user.role)) {
+    // Special message for order request page
+    const isOrderRequestPage = window.location.pathname === '/order-request';
+    const message = isOrderRequestPage 
+      ? "Trang này chỉ hỗ trợ người mua đã đăng ký tài khoản"
+      : "Bạn không có quyền truy cập trang này.";
+    
     return (
       <Box
         display="flex"
@@ -32,7 +38,7 @@ const ProtectedRoute = ({ children, roles = [] }) => {
         minHeight="100vh"
       >
         <Typography variant="h5" color="error">
-          Bạn không có quyền truy cập trang này.
+          {message}
         </Typography>
       </Box>
     );
