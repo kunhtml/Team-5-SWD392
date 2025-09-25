@@ -29,6 +29,7 @@ import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { useDispatch } from "react-redux";
 import { addToCart } from "../store/slices/cartSlice";
+import Chatbot from "../components/Chatbot";
 
 const Home = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -802,6 +803,7 @@ const Home = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
+      <Chatbot />
     </Box>
   );
 };
