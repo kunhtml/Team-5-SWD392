@@ -14,6 +14,8 @@ import {
   Divider,
   IconButton,
   TextField,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
@@ -23,8 +25,12 @@ const ProductDetail = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
+  // State for notification
+  const [notification, setNotification] = useState({ open: false, message: "" });
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  // Get user information from Redux store
+  const { user } = useSelector((state) => state.auth);
 
   useEffect(() => {
     fetchProduct();
@@ -61,6 +67,15 @@ const ProductDetail = () => {
   };
 
   const handleAddToCart = () => {
+    // Check if user is admin
+    if (user && user.role === "admin") {
+      setNotification({
+        open: true,
+        message: "Chức năng không cho phép sử dụng khi bạn đang đăng nhập bằng tài khoản quản trị viên",
+      });
+      return;
+    }
+    
     if (product) {
       dispatch(
         addToCart({
@@ -72,6 +87,27 @@ const ProductDetail = () => {
         })
       );
     }
+  };
+
+  // Handle buy now button click
+  const handleBuyNow = () => {
+    // Check if user is admin
+    if (user && user.role === "admin") {
+      setNotification({
+        open: true,
+        message: "Chức năng không cho phép sử dụng khi bạn đang đăng nhập bằng tài khoản quản trị viên",
+      });
+      return;
+    }
+    
+    // Implement buy now functionality for non-admin users
+    // This would typically navigate to checkout page
+    navigate("/cart");
+  };
+
+  // Close notification handler
+  const handleCloseNotification = () => {
+    setNotification({ ...notification, open: false });
   };
 
   if (loading) return <Typography>Loading...</Typography>;
@@ -155,11 +191,27 @@ const ProductDetail = () => {
           >
             {product.stock === 0 ? "Hết Hàng" : "Thêm Vào Giỏ"}
           </Button>
-          <Button variant="outlined" size="large">
+          <Button 
+            variant="outlined" 
+            size="large"
+            onClick={handleBuyNow}
+          >
             Mua Ngay
           </Button>
         </Box>
       </Box>
+      
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert onClose={handleCloseNotification} severity="warning" sx={{ width: "100%" }}>
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
