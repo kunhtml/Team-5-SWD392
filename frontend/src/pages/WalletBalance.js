@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import api from "../services/api";
 import {
   Box,
@@ -14,9 +15,18 @@ import {
   MenuItem,
   Alert,
   Snackbar,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
+  Pagination,
 } from "@mui/material";
 
 export default function WalletBalance() {
+  const { user } = useSelector((state) => state.auth);
   const [balance, setBalance] = useState(0);
   const [currency, setCurrency] = useState("VND");
   const [loading, setLoading] = useState(true);
@@ -36,6 +46,17 @@ export default function WalletBalance() {
   const [debugLoading, setDebugLoading] = useState(false);
   const [debugData, setDebugData] = useState(null);
 
+  // Withdrawal states
+  const [openWithdraw, setOpenWithdraw] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [bankAccount, setBankAccount] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [withdrawNotes, setWithdrawNotes] = useState("");
+  const [withdrawalRequests, setWithdrawalRequests] = useState([]);
+  const [withdrawalPage, setWithdrawalPage] = useState(1);
+  const [withdrawalTotal, setWithdrawalTotal] = useState(0);
+  const [withdrawalPages, setWithdrawalPages] = useState(1);
+
   useEffect(() => {
     const fetchBalance = async () => {
       try {
@@ -51,6 +72,120 @@ export default function WalletBalance() {
     };
     fetchBalance();
   }, []);
+
+  useEffect(() => {
+    if (user?.role === "florist") {
+      fetchWithdrawalRequests();
+    }
+  }, [user, withdrawalPage]);
+
+  const fetchWithdrawalRequests = async () => {
+    try {
+      const res = await api.get("/wallet/withdrawals", {
+        params: { page: withdrawalPage, limit: 10 },
+      });
+      setWithdrawalRequests(res.data.requests || []);
+      setWithdrawalTotal(res.data.total || 0);
+      setWithdrawalPages(res.data.pages || 1);
+    } catch (e) {
+      console.error("Failed to fetch withdrawal requests:", e);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    try {
+      setSubmitting(true);
+      const amount = parseFloat(withdrawAmount);
+      
+      if (!amount || amount <= 0) {
+        setToast({
+          open: true,
+          message: "Số tiền không hợp lệ",
+          severity: "error",
+        });
+        return;
+      }
+
+      if (amount > balance) {
+        setToast({
+          open: true,
+          message: "Số dư không đủ",
+          severity: "error",
+        });
+        return;
+      }
+
+      if (!bankAccount.trim() || !bankName.trim()) {
+        setToast({
+          open: true,
+          message: "Vui lòng điền đầy đủ thông tin ngân hàng",
+          severity: "error",
+        });
+        return;
+      }
+
+      const res = await api.post("/wallet/withdraw", {
+        amount,
+        bank_account: bankAccount.trim(),
+        bank_name: bankName.trim(),
+        notes: withdrawNotes.trim(),
+      });
+
+      setToast({
+        open: true,
+        message: res.data.message || "Yêu cầu rút tiền đã được gửi",
+        severity: "success",
+      });
+
+      // Reset form and close dialog
+      setOpenWithdraw(false);
+      setWithdrawAmount("");
+      setBankAccount("");
+      setBankName("");
+      setWithdrawNotes("");
+      
+      // Refresh withdrawal requests
+      fetchWithdrawalRequests();
+    } catch (e) {
+      setToast({
+        open: true,
+        message: e.response?.data?.message || "Có lỗi xảy ra",
+        severity: "error",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "pending":
+        return "warning";
+      case "approved":
+        return "info";
+      case "processed":
+        return "success";
+      case "rejected":
+        return "error";
+      default:
+        return "default";
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case "pending":
+        return "Chờ duyệt";
+      case "approved":
+        return "Đã duyệt";
+      case "processed":
+        return "Đã xử lý";
+      case "rejected":
+        return "Từ chối";
+      default:
+        return status;
+    }
+  };
 
   return (
     <Box sx={{ mt: 4 }}>
@@ -71,13 +206,157 @@ export default function WalletBalance() {
               <Button variant="contained" onClick={() => setOpenDeposit(true)}>
                 Nạp Tiền
               </Button>
-              <Button variant="outlined" disabled>
-                Rút Tiền (sắp có)
-              </Button>
+              {user?.role === "florist" && (
+                <Button 
+                  variant="outlined" 
+                  onClick={() => setOpenWithdraw(true)}
+                  disabled={balance <= 0}
+                >
+                  Rút Tiền
+                </Button>
+              )}
             </Stack>
           </>
         )}
       </Paper>
+
+      {/* Withdrawal History for Florists */}
+      {user?.role === "florist" && (
+        <Paper sx={{ p: 3, mt: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Lịch Sử Rút Tiền
+          </Typography>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Ngày</TableCell>
+                  <TableCell>Số tiền</TableCell>
+                  <TableCell>Ngân hàng</TableCell>
+                  <TableCell>Số tài khoản</TableCell>
+                  <TableCell>Trạng thái</TableCell>
+                  <TableCell>Ghi chú</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {withdrawalRequests.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center">
+                      Chưa có yêu cầu rút tiền nào
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  withdrawalRequests.map((request) => (
+                    <TableRow key={request.id}>
+                      <TableCell>
+                        {new Date(request.createdAt).toLocaleDateString("vi-VN")}
+                      </TableCell>
+                      <TableCell>
+                        {Number(request.amount).toLocaleString("vi-VN")} VND
+                      </TableCell>
+                      <TableCell>{request.bank_name}</TableCell>
+                      <TableCell>{request.bank_account}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={getStatusText(request.status)}
+                          color={getStatusColor(request.status)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>{request.notes || "-"}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          {withdrawalPages > 1 && (
+            <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+              <Pagination
+                count={withdrawalPages}
+                page={withdrawalPage}
+                onChange={(e, page) => setWithdrawalPage(page)}
+                color="primary"
+              />
+            </Box>
+          )}
+        </Paper>
+      )}
+
+      {/* Withdraw Dialog */}
+      <Dialog
+        open={openWithdraw}
+        onClose={() => setOpenWithdraw(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Yêu Cầu Rút Tiền</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Số dư hiện tại: {balance.toLocaleString("vi-VN")} VND
+          </Typography>
+          <TextField
+            label="Số tiền muốn rút (VND)"
+            type="number"
+            fullWidth
+            margin="normal"
+            value={withdrawAmount}
+            onChange={(e) => setWithdrawAmount(e.target.value)}
+            inputProps={{ min: 1000, max: balance, step: 1000 }}
+            helperText="Số tiền tối thiểu: 10,000 VND"
+          />
+          <TextField
+            label="Tên ngân hàng"
+            fullWidth
+            margin="normal"
+            value={bankName}
+            onChange={(e) => setBankName(e.target.value)}
+            placeholder="VD: Vietcombank, BIDV, Techcombank..."
+          />
+          <TextField
+            label="Số tài khoản"
+            fullWidth
+            margin="normal"
+            value={bankAccount}
+            onChange={(e) => setBankAccount(e.target.value)}
+            placeholder="Nhập số tài khoản ngân hàng"
+          />
+          <TextField
+            label="Ghi chú (tùy chọn)"
+            fullWidth
+            margin="normal"
+            multiline
+            rows={3}
+            value={withdrawNotes}
+            onChange={(e) => setWithdrawNotes(e.target.value)}
+            placeholder="Thêm ghi chú nếu cần..."
+          />
+          <Alert severity="info" sx={{ mt: 2 }}>
+            Yêu cầu rút tiền sẽ được admin xem xét và xử lý trong 1-3 ngày làm việc.
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setOpenWithdraw(false);
+              setWithdrawAmount("");
+              setBankAccount("");
+              setBankName("");
+              setWithdrawNotes("");
+            }}
+            disabled={submitting}
+          >
+            Hủy
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleWithdraw}
+            disabled={submitting}
+          >
+            {submitting ? "Đang xử lý..." : "Gửi Yêu Cầu"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Deposit Dialog */}
       <Dialog
