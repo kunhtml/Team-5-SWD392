@@ -30,8 +30,12 @@ const Products = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false); // Added state for snackbar
   const [snackbarMessage, setSnackbarMessage] = useState(""); // Added message state
   const [quantities, setQuantities] = useState({});
+  // State for admin restriction notification
+  const [adminNotification, setAdminNotification] = useState({ open: false, message: "" });
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  // Get user information from Redux store
+  const { user } = useSelector((state) => state.auth);
 
   useEffect(() => {
     fetchProducts();
@@ -74,7 +78,19 @@ const Products = () => {
     setQuantity(productId, isNaN(quantity) ? 1 : quantity);
   };
 
+  // Check if user is admin
+  const isAdmin = user && user.role === "admin";
+
   const handleAddToCart = (product) => {
+    // Check if user is admin
+    if (isAdmin) {
+      setAdminNotification({
+        open: true,
+        message: "Chức năng không cho phép sử dụng khi bạn đang đăng nhập bằng tài khoản quản trị viên",
+      });
+      return;
+    }
+    
     const quantity = getQuantity(product.id);
     dispatch(
       addToCart({
@@ -92,6 +108,15 @@ const Products = () => {
   };
 
   const handleBuyNow = (product) => {
+    // Check if user is admin
+    if (isAdmin) {
+      setAdminNotification({
+        open: true,
+        message: "Chức năng không cho phép sử dụng khi bạn đang đăng nhập bằng tài khoản quản trị viên",
+      });
+      return;
+    }
+    
     const quantity = getQuantity(product.id);
     dispatch(
       addToCart({
@@ -107,6 +132,11 @@ const Products = () => {
 
   const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
+  };
+
+  // Close admin notification handler
+  const handleCloseAdminNotification = () => {
+    setAdminNotification({ ...adminNotification, open: false });
   };
 
   if (loading) {
@@ -309,7 +339,7 @@ const Products = () => {
                     variant="contained"
                     onClick={() => handleAddToCart(product)}
                     startIcon={<ShoppingCart />}
-                    disabled={(product?.stock || 0) === 0}
+                    disabled={(product?.stock || 0) === 0 || isAdmin}
                     sx={{
                       flex: 2,
                       py: 1,
@@ -332,7 +362,7 @@ const Products = () => {
                   variant="outlined"
                   onClick={() => handleBuyNow(product)}
                   fullWidth
-                  disabled={(product?.stock || 0) === 0}
+                  disabled={(product?.stock || 0) === 0 || isAdmin}
                   sx={{
                     py: 1.2,
                     fontWeight: 600,
@@ -373,6 +403,18 @@ const Products = () => {
           sx={{ width: "100%" }}
         >
           {snackbarMessage}
+        </Alert>
+      </Snackbar>
+      
+      {/* Admin restriction notification */}
+      <Snackbar
+        open={adminNotification.open}
+        autoHideDuration={6000}
+        onClose={handleCloseAdminNotification}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert onClose={handleCloseAdminNotification} severity="warning" sx={{ width: "100%" }}>
+          {adminNotification.message}
         </Alert>
       </Snackbar>
     </Box>
