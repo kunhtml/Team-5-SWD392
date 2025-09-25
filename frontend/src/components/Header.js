@@ -56,6 +56,12 @@ const Header = () => {
             Về chúng tôi
           </Button>
 
+          {user && user.role !== "florist" && user.role !== "admin" && (
+            <Button color="inherit" component={Link} to="/order-request">
+              Đặt Hàng
+            </Button>
+          )}
+
           {user ? (
             <>
               <Badge
@@ -92,21 +98,14 @@ const Header = () => {
                 {user.role !== "florist" && user.role !== "admin" && (
                   <MenuItem
                     component={Link}
-                    to="/orders"
+                    to="/dashboard"
                     onClick={handleMenuClose}
                   >
-                    Đơn hàng của tôi
+                    Dashboard
                   </MenuItem>
                 )}
-                {user.role !== "florist" && user.role !== "admin" && (
-                  <MenuItem
-                    component={Link}
-                    to="/wallet/balance"
-                    onClick={handleMenuClose}
-                  >
-                    Ví
-                  </MenuItem>
-                )}
+                
+                
                 {user.role === "admin" && (
                   <MenuItem
                     component={Link}
@@ -125,15 +124,7 @@ const Header = () => {
                     Cửa hàng của tôi
                   </MenuItem>
                 )}
-                {user.role === "customer" && (
-                  <MenuItem
-                    component={Link}
-                    to="/shop-request"
-                    onClick={handleMenuClose}
-                  >
-                    Mở cửa hàng
-                  </MenuItem>
-                )}
+                
                 <Divider />
                 <MenuItem
                   onClick={() => {
