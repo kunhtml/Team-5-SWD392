@@ -13,6 +13,7 @@ import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Orders from "./pages/Orders";
+import OrderRequest from "./pages/OrderRequest";
 import ShopRequest from "./pages/ShopRequest";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -81,6 +82,14 @@ function App() {
           element={
             <ProtectedRoute roles={["customer", "florist", "admin"]}>
               <Orders />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/order-request"
+          element={
+            <ProtectedRoute roles={["customer"]}>
+              <OrderRequest />
             </ProtectedRoute>
           }
         />
