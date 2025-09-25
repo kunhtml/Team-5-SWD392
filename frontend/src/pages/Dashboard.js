@@ -29,7 +29,7 @@ const Dashboard = () => {
     name: "",
     phone: "",
     address: "",
-    avatar_url: "", // Added back avatar_url to support file upload
+    avatar_url: "",
   });
   const [uploading, setUploading] = useState(false);
   const navigate = useNavigate();
@@ -91,7 +91,7 @@ const Dashboard = () => {
                         name: user.name || "",
                         phone: user.phone || "",
                         address: user.address || "",
-                        avatar_url: user.avatar_url || "", // Added back avatar_url
+                        avatar_url: user.avatar_url || "",
                       });
                       setEditOpen(true);
                     }}
@@ -205,7 +205,12 @@ const Dashboard = () => {
               multiline
               minRows={2}
             />
-            {/* Restored file upload button without Avatar URL field */}
+            <TextField
+              label="Avatar URL"
+              value={form.avatar_url}
+              onChange={(e) => setForm({ ...form, avatar_url: e.target.value })}
+              placeholder="https://..."
+            />
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <Button variant="outlined" component="label" size="small">
                 Chọn ảnh từ máy
@@ -259,19 +264,6 @@ const Dashboard = () => {
                 />
               )}
             </Box>
-            {/* Added image preview below the upload button */}
-            {form.avatar_url && (
-              <Box sx={{ mt: 2, textAlign: "center" }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Ảnh đã chọn:
-                </Typography>
-                <Avatar
-                  src={form.avatar_url}
-                  alt="Preview"
-                  sx={{ width: 100, height: 100, margin: "0 auto" }}
-                />
-              </Box>
-            )}
           </Box>
         </DialogContent>
         <DialogActions>
@@ -284,7 +276,6 @@ const Dashboard = () => {
                   window.alert("Tên là bắt buộc");
                   return;
                 }
-                // Include avatar_url in the update request
                 await api.put("/users/profile", form);
                 await dispatch(fetchUserFromToken());
                 setEditOpen(false);
