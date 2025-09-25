@@ -49,12 +49,13 @@ const AdminDashboard = () => {
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      const [usersRes, shopsRes, requestsRes, withdrawalRes] = await Promise.all([
-        api.get("/users"),
-        api.get("/shops"),
-        api.get("/shops/request"), // Assume endpoint for pending requests
-        api.get("/wallet/withdrawals"), // Get all withdrawal requests for admin
-      ]);
+      const [usersRes, shopsRes, requestsRes, withdrawalRes] =
+        await Promise.all([
+          api.get("/users"),
+          api.get("/shops"),
+          api.get("/shops/request"), // Assume endpoint for pending requests
+          api.get("/wallet/withdrawals"), // Get all withdrawal requests for admin
+        ]);
       setUsers(usersRes.data.users || []);
       setShops(shopsRes.data.shops || []);
       setRequests(requestsRes.data.requests || []);
@@ -85,7 +86,9 @@ const AdminDashboard = () => {
       });
       setToast({
         open: true,
-        message: `Đã ${status === "processed" ? "duyệt" : "từ chối"} yêu cầu rút tiền`,
+        message: `Đã ${
+          status === "processed" ? "duyệt" : "từ chối"
+        } yêu cầu rút tiền`,
         severity: "success",
       });
       fetchAdminData(); // Refresh
@@ -314,7 +317,9 @@ const AdminDashboard = () => {
                     <TableCell>{withdrawal.bank_name}</TableCell>
                     <TableCell>{withdrawal.bank_account}</TableCell>
                     <TableCell>
-                      {new Date(withdrawal.createdAt).toLocaleDateString("vi-VN")}
+                      {new Date(withdrawal.createdAt).toLocaleDateString(
+                        "vi-VN"
+                      )}
                     </TableCell>
                     <TableCell>
                       <Chip
@@ -324,7 +329,13 @@ const AdminDashboard = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: "flex", gap: 1, flexDirection: "column" }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 1,
+                          flexDirection: "column",
+                        }}
+                      >
                         <Button
                           size="small"
                           variant="outlined"
@@ -384,9 +395,9 @@ const AdminDashboard = () => {
                           withdrawal.status === "rejected") && (
                           <Typography variant="body2" color="text.secondary">
                             {withdrawal.processed_at
-                              ? new Date(withdrawal.processed_at).toLocaleDateString(
-                                  "vi-VN"
-                                )
+                              ? new Date(
+                                  withdrawal.processed_at
+                                ).toLocaleDateString("vi-VN")
                               : "-"}
                           </Typography>
                         )}
@@ -419,10 +430,13 @@ const AdminDashboard = () => {
                 <strong>ID:</strong> {selectedWithdrawal.id}
               </Typography>
               <Typography variant="body1" gutterBottom>
-                <strong>Florist:</strong> {selectedWithdrawal.user?.name || selectedWithdrawal.user?.email}
+                <strong>Florist:</strong>{" "}
+                {selectedWithdrawal.user?.name ||
+                  selectedWithdrawal.user?.email}
               </Typography>
               <Typography variant="body1" gutterBottom>
-                <strong>Số tiền:</strong> {Number(selectedWithdrawal.amount).toLocaleString("vi-VN")} VND
+                <strong>Số tiền:</strong>{" "}
+                {Number(selectedWithdrawal.amount).toLocaleString("vi-VN")} VND
               </Typography>
               <Typography variant="body1" gutterBottom>
                 <strong>Ngân hàng:</strong> {selectedWithdrawal.bank_name}
@@ -431,7 +445,8 @@ const AdminDashboard = () => {
                 <strong>Số tài khoản:</strong> {selectedWithdrawal.bank_account}
               </Typography>
               <Typography variant="body1" gutterBottom>
-                <strong>Ngày tạo:</strong> {new Date(selectedWithdrawal.createdAt).toLocaleString("vi-VN")}
+                <strong>Ngày tạo:</strong>{" "}
+                {new Date(selectedWithdrawal.createdAt).toLocaleString("vi-VN")}
               </Typography>
               <Typography variant="body1" gutterBottom>
                 <strong>Trạng thái:</strong>{" "}
@@ -443,15 +458,19 @@ const AdminDashboard = () => {
               </Typography>
               {selectedWithdrawal.notes && (
                 <Typography variant="body1" gutterBottom>
-                  <strong>Ghi chú từ florist:</strong> {selectedWithdrawal.notes}
+                  <strong>Ghi chú từ florist:</strong>{" "}
+                  {selectedWithdrawal.notes}
                 </Typography>
               )}
               {selectedWithdrawal.processed_at && (
                 <Typography variant="body1" gutterBottom>
-                  <strong>Ngày xử lý:</strong> {new Date(selectedWithdrawal.processed_at).toLocaleString("vi-VN")}
+                  <strong>Ngày xử lý:</strong>{" "}
+                  {new Date(selectedWithdrawal.processed_at).toLocaleString(
+                    "vi-VN"
+                  )}
                 </Typography>
               )}
-              
+
               {selectedWithdrawal.status === "pending" && (
                 <Box sx={{ mt: 3 }}>
                   <TextField

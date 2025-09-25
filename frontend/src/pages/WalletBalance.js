@@ -96,7 +96,7 @@ export default function WalletBalance() {
     try {
       setSubmitting(true);
       const amount = parseFloat(withdrawAmount);
-      
+
       if (!amount || amount <= 0) {
         setToast({
           open: true,
@@ -143,7 +143,7 @@ export default function WalletBalance() {
       setBankAccount("");
       setBankName("");
       setWithdrawNotes("");
-      
+
       // Refresh withdrawal requests
       fetchWithdrawalRequests();
     } catch (e) {
@@ -207,8 +207,8 @@ export default function WalletBalance() {
                 Nạp Tiền
               </Button>
               {user?.role === "florist" && (
-                <Button 
-                  variant="outlined" 
+                <Button
+                  variant="outlined"
                   onClick={() => setOpenWithdraw(true)}
                   disabled={balance <= 0}
                 >
@@ -249,7 +249,9 @@ export default function WalletBalance() {
                   withdrawalRequests.map((request) => (
                     <TableRow key={request.id}>
                       <TableCell>
-                        {new Date(request.createdAt).toLocaleDateString("vi-VN")}
+                        {new Date(request.createdAt).toLocaleDateString(
+                          "vi-VN"
+                        )}
                       </TableCell>
                       <TableCell>
                         {Number(request.amount).toLocaleString("vi-VN")} VND
@@ -332,7 +334,8 @@ export default function WalletBalance() {
             placeholder="Thêm ghi chú nếu cần..."
           />
           <Alert severity="info" sx={{ mt: 2 }}>
-            Yêu cầu rút tiền sẽ được admin xem xét và xử lý trong 1-3 ngày làm việc.
+            Yêu cầu rút tiền sẽ được admin xem xét và xử lý trong 1-3 ngày làm
+            việc.
           </Alert>
         </DialogContent>
         <DialogActions>

@@ -54,13 +54,13 @@ const Products = () => {
   };
 
   const setQuantity = (productId, quantity) => {
-    const product = products.find(p => p.id === productId);
+    const product = products.find((p) => p.id === productId);
     const maxStock = Math.max(0, Number(product?.stock || 1));
     const clampedQuantity = Math.min(Math.max(1, quantity), maxStock || 1);
-    
-    setQuantities(prev => ({
+
+    setQuantities((prev) => ({
       ...prev,
-      [productId]: clampedQuantity
+      [productId]: clampedQuantity,
     }));
   };
 
@@ -85,7 +85,9 @@ const Products = () => {
         shopId: product.shop?.id,
       })
     );
-    setSnackbarMessage(`${product.name} (${quantity}) đã được thêm vào giỏ hàng!`); // Set message
+    setSnackbarMessage(
+      `${product.name} (${quantity}) đã được thêm vào giỏ hàng!`
+    ); // Set message
     setSnackbarOpen(true); // Open snackbar
   };
 
@@ -100,7 +102,7 @@ const Products = () => {
         shopId: product.shop?.id,
       })
     );
-    navigate('/cart');
+    navigate("/cart");
   };
 
   const handleCloseSnackbar = () => {
@@ -146,8 +148,8 @@ const Products = () => {
       <Grid container spacing={3}>
         {products.map((product) => (
           <Grid item xs={12} sm={6} md={4} key={product.id}>
-            <Card 
-              sx={{ 
+            <Card
+              sx={{
                 height: "100%",
                 display: "flex",
                 flexDirection: "column",
@@ -155,7 +157,7 @@ const Products = () => {
                 "&:hover": {
                   transform: "translateY(-4px)",
                   boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
-                }
+                },
               }}
             >
               <CardMedia
@@ -163,12 +165,14 @@ const Products = () => {
                 height="200"
                 image={product.image_url || "/placeholder-flower.jpg"}
                 alt={product.name}
-                sx={{ 
+                sx={{
                   transition: "transform 0.3s ease",
-                  "&:hover": { transform: "scale(1.02)" }
+                  "&:hover": { transform: "scale(1.02)" },
                 }}
               />
-              <CardContent sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
+              <CardContent
+                sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}
+              >
                 <Typography
                   gutterBottom
                   variant="h6"
@@ -178,42 +182,53 @@ const Products = () => {
                     textDecoration: "none",
                     color: "inherit",
                     fontWeight: 600,
-                    "&:hover": { 
+                    "&:hover": {
                       textDecoration: "underline",
-                      color: "primary.main"
+                      color: "primary.main",
                     },
                   }}
                 >
                   {product.name}
                 </Typography>
-                <Typography 
-                  variant="body2" 
-                  color="text.secondary" 
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
                   sx={{ mb: 1, flexGrow: 1 }}
                 >
                   {product.description?.substring(0, 100)}...
                 </Typography>
-                <Typography variant="h5" color="primary" sx={{ mb: 1, fontWeight: 700 }}>
+                <Typography
+                  variant="h5"
+                  color="primary"
+                  sx={{ mb: 1, fontWeight: 700 }}
+                >
                   {parseFloat(product.price).toLocaleString("vi-VN", {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 2,
-                  })} ₫
+                  })}{" "}
+                  ₫
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ mb: 1 }}
+                >
                   Cửa hàng: {product.shop?.name}
                 </Typography>
-                
+
                 {/* Stock Information */}
-                <Typography 
-                  variant="body2" 
-                  color="text.secondary" 
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
                   sx={{ mb: 2 }}
                 >
                   Tồn kho: {product?.stock || 0} sản phẩm
                 </Typography>
 
                 {/* Quantity Selector */}
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+                <Box
+                  sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}
+                >
                   <Typography variant="body2" sx={{ minWidth: 60 }}>
                     Số lượng:
                   </Typography>
@@ -222,11 +237,11 @@ const Products = () => {
                       size="small"
                       onClick={() => handleQuantityChange(product.id, -1)}
                       disabled={getQuantity(product.id) <= 1}
-                      sx={{ 
+                      sx={{
                         border: "1px solid",
                         borderColor: "divider",
                         width: 32,
-                        height: 32
+                        height: 32,
                       }}
                     >
                       <Remove fontSize="small" />
@@ -234,32 +249,38 @@ const Products = () => {
                     <TextField
                       size="small"
                       type="number"
-                      inputProps={{ 
-                        min: 1, 
+                      inputProps={{
+                        min: 1,
                         max: product?.stock || 1,
-                        style: { textAlign: 'center', padding: '8px', width: '50px' }
+                        style: {
+                          textAlign: "center",
+                          padding: "8px",
+                          width: "50px",
+                        },
                       }}
                       value={getQuantity(product.id)}
-                      onChange={(e) => handleQuantityInput(product.id, e.target.value)}
-                      sx={{ 
+                      onChange={(e) =>
+                        handleQuantityInput(product.id, e.target.value)
+                      }
+                      sx={{
                         width: 70,
-                        '& .MuiOutlinedInput-root': {
+                        "& .MuiOutlinedInput-root": {
                           height: 32,
-                        }
+                        },
                       }}
                     />
                     <IconButton
                       size="small"
                       onClick={() => handleQuantityChange(product.id, 1)}
                       disabled={
-                        (product?.stock || 0) === 0 || 
+                        (product?.stock || 0) === 0 ||
                         getQuantity(product.id) >= (product?.stock || 1)
                       }
-                      sx={{ 
+                      sx={{
                         border: "1px solid",
                         borderColor: "divider",
                         width: 32,
-                        height: 32
+                        height: 32,
                       }}
                     >
                       <Add fontSize="small" />
@@ -298,8 +319,8 @@ const Products = () => {
                       },
                       "&:disabled": {
                         bgcolor: "grey.300",
-                        color: "grey.600"
-                      }
+                        color: "grey.600",
+                      },
                     }}
                   >
                     {(product?.stock || 0) === 0 ? "Hết Hàng" : "Thêm Vào Giỏ"}
@@ -327,8 +348,8 @@ const Products = () => {
                     },
                     "&:disabled": {
                       borderColor: "grey.300",
-                      color: "grey.600"
-                    }
+                      color: "grey.600",
+                    },
                   }}
                 >
                   {(product?.stock || 0) === 0 ? "Hết Hàng" : "Mua Ngay"}
