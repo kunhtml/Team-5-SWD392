@@ -89,7 +89,7 @@ const Header = () => {
                 anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
                 transformOrigin={{ vertical: "top", horizontal: "right" }}
               >
-                {user.role !== "florist" && (
+                {user.role !== "florist" && user.role !== "admin" && (
                   <MenuItem
                     component={Link}
                     to="/orders"
@@ -98,7 +98,7 @@ const Header = () => {
                     Đơn hàng của tôi
                   </MenuItem>
                 )}
-                {user.role !== "florist" && (
+                {user.role !== "florist" && user.role !== "admin" && (
                   <MenuItem
                     component={Link}
                     to="/wallet/balance"
