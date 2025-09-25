@@ -22,6 +22,8 @@ import {
   TextField,
   Avatar,
   CircularProgress,
+  MenuItem,
+  Stack,
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
@@ -45,6 +47,19 @@ const FloristDashboard = () => {
     image_url: "",
   });
   const [uploadingShopImg, setUploadingShopImg] = useState(false);
+  // States for product creation dialog
+  const [createProductOpen, setCreateProductOpen] = useState(false);
+  const [productForm, setProductForm] = useState({
+    name: "",
+    price: "",
+    stock: "",
+    description: "",
+    category_id: "",
+  });
+  const [categories, setCategories] = useState([]);
+  const [imageFile, setImageFile] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetchFloristData();
@@ -69,6 +84,15 @@ const FloristDashboard = () => {
       setOrders([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await api.get("/categories");
+      setCategories(res.data.categories || []);
+    } catch (e) {
+      console.error("Failed to load categories", e);
     }
   };
 
@@ -226,6 +250,68 @@ const FloristDashboard = () => {
     }
   };
 
+  const resetProductForm = () => {
+    setProductForm({
+      name: "",
+      price: "",
+      stock: "",
+      description: "",
+      category_id: "",
+    });
+    setImageFile(null);
+    setError("");
+  };
+
+  const handleCreateProduct = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      const priceNum = parseInt(productForm.price, 10);
+      if (!Number.isFinite(priceNum) || priceNum <= 0) {
+        throw new Error("Giá phải là số nguyên dương");
+      }
+      let uploadedUrl = null;
+      if (imageFile) {
+        const imgbbKey = process.env.REACT_APP_IMGBB_KEY;
+        if (!imgbbKey) {
+          throw new Error("Thiếu REACT_APP_IMGBB_KEY trong env");
+        }
+        const formData = new FormData();
+        formData.append("key", imgbbKey);
+        formData.append("image", imageFile);
+        const res = await fetch("https://api.imgbb.com/1/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        if (!data || !data.success) {
+          throw new Error("Tải ảnh lên thất bại");
+        }
+        uploadedUrl = data.data?.url || data.data?.display_url;
+      }
+
+      const payload = {
+        name: productForm.name,
+        price: priceNum,
+        stock: parseInt(productForm.stock, 10),
+        description: productForm.description,
+        category_id: parseInt(productForm.category_id, 10),
+      };
+      if (uploadedUrl) payload.image_url = uploadedUrl;
+
+      await api.post("/products", payload);
+      setCreateProductOpen(false);
+      resetProductForm();
+      await reloadProducts(); // Refresh the product list
+    } catch (e) {
+      setError(
+        e.response?.data?.message || e.message || "Không thể tạo sản phẩm"
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) return <Typography>Loading...</Typography>;
 
   return (
@@ -325,6 +411,17 @@ const FloristDashboard = () => {
       {tabValue === 0 && (
         <TableContainer component={Paper}>
           <Box sx={{ display: "flex", justifyContent: "flex-end", p: 2 }}>
+            <Button 
+              size="small" 
+              variant="contained" 
+              sx={{ mr: 1 }}
+              onClick={() => {
+                fetchCategories();
+                setCreateProductOpen(true);
+              }}
+            >
+              Tạo sản phẩm
+            </Button>
             <Button size="small" variant="outlined" onClick={reloadProducts}>
               Tải lại
             </Button>
@@ -601,6 +698,103 @@ const FloristDashboard = () => {
           <Button onClick={() => setEditOpen(false)}>Hủy</Button>
           <Button variant="contained" onClick={submitEditShop}>
             Lưu
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Create product dialog */}
+      <Dialog
+        open={createProductOpen}
+        onClose={() => {
+          setCreateProductOpen(false);
+          resetProductForm();
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Tạo sản phẩm</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            {error && <Typography color="error">{error}</Typography>}
+            <TextField
+              label="Tên sản phẩm"
+              value={productForm.name}
+              onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+              required
+            />
+            <TextField
+              label="Danh mục"
+              select
+              value={productForm.category_id}
+              onChange={(e) =>
+                setProductForm({ ...productForm, category_id: e.target.value })
+              }
+              required
+            >
+              {categories.map((c) => (
+                <MenuItem key={c.id} value={c.id}>
+                  {c.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              label="Giá"
+              type="text"
+              inputMode="numeric"
+              value={productForm.price}
+              onChange={(e) => {
+                const v = e.target.value.replace(/\D/g, "");
+                setProductForm({ ...productForm, price: v });
+              }}
+              required
+              helperText="Chỉ nhập số, > 0"
+            />
+            <TextField
+              label="Tồn kho"
+              type="number"
+              value={productForm.stock}
+              onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
+              required
+            />
+            <TextField
+              label="Mô tả"
+              multiline
+              minRows={3}
+              value={productForm.description}
+              onChange={(e) =>
+                setProductForm({ ...productForm, description: e.target.value })
+              }
+            />
+            <Button variant="outlined" component="label">
+              Chọn ảnh
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) setImageFile(f);
+                }}
+              />
+            </Button>
+            {imageFile && (
+              <Typography variant="body2" color="text.secondary">
+                Ảnh đã chọn: {imageFile.name}
+              </Typography>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setCreateProductOpen(false);
+              resetProductForm();
+            }}
+          >
+            Hủy
+          </Button>
+          <Button variant="contained" onClick={handleCreateProduct} disabled={saving}>
+            {saving ? "Đang lưu..." : "Tạo"}
           </Button>
         </DialogActions>
       </Dialog>
