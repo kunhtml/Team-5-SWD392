@@ -21,6 +21,7 @@ import {
 import { Add, Remove, ShoppingCart } from "@mui/icons-material";
 import { addToCart } from "../store/slices/cartSlice";
 import { useDispatch } from "react-redux";
+import Chatbot from "../components/Chatbot";
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -417,6 +418,7 @@ const Products = () => {
           {adminNotification.message}
         </Alert>
       </Snackbar>
+      <Chatbot />
     </Box>
   );
 };
