@@ -6,6 +6,7 @@ const {
   User,
   Wallet,
   WalletTransaction,
+  SpecialOrderRequest,
 } = require("../models");
 const { Op } = require("sequelize");
 
@@ -25,12 +26,24 @@ const createOrder = async (req, res) => {
 
     for (const item of items) {
       const product = await Product.findByPk(item.product_id, {
-        include: "shop",
+        include: [
+          {
+            model: Shop,
+            as: "shop",
+            attributes: ["id", "name", "florist_id"],
+          },
+        ],
       });
       if (!product || product.stock < item.quantity) {
         return res
           .status(400)
           .json({ message: `Insufficient stock for ${product?.name}` });
+      }
+
+      if (product.shop && product.shop.florist_id === userId) {
+        return res.status(403).json({
+          message: `Bạn không thể đặt mua sản phẩm "${product.name}" vì đây là sản phẩm thuộc cửa hàng của bạn`,
+        });
       }
 
       const itemTotal = product.price * item.quantity;
@@ -546,7 +559,11 @@ const updateShippingAddress = async (req, res) => {
 const getSpecialOrders = async (req, res) => {
   try {
     // Only florists, admins, and customers can access special orders
-    if (req.user.role !== "florist" && req.user.role !== "admin" && req.user.role !== "customer") {
+    if (
+      req.user.role !== "florist" &&
+      req.user.role !== "admin" &&
+      req.user.role !== "customer"
+    ) {
       return res.status(403).json({ message: "Access denied" });
     }
 
@@ -583,13 +600,11 @@ const getSpecialOrders = async (req, res) => {
       where,
       include: [
         { model: User, as: "customer", attributes: ["id", "name"] },
-        { 
-          model: Shop, 
-          as: "shop", 
+        {
+          model: Shop,
+          as: "shop",
           attributes: ["id", "name", "florist_id"],
-          include: [
-            { model: User, as: "florist", attributes: ["id"] }
-          ]
+          include: [{ model: User, as: "florist", attributes: ["id"] }],
         },
         {
           model: OrderItem,
@@ -620,6 +635,127 @@ const getSpecialOrders = async (req, res) => {
   }
 };
 
+// Create order from special order request
+const createOrderFromSpecialRequest = async (req, res) => {
+  try {
+    const { special_request_id, items, total_amount, payment_method } =
+      req.body;
+
+    // Only florists and admins can create orders from special requests
+    if (req.user.role !== "florist" && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    // Find the special order request
+    const specialRequest = await SpecialOrderRequest.findByPk(
+      special_request_id,
+      {
+        include: [
+          { model: User, as: "customer", attributes: ["id", "name"] },
+          { model: Shop, as: "assignedShop" },
+        ],
+      }
+    );
+
+    if (!specialRequest) {
+      return res
+        .status(404)
+        .json({ message: "Không tìm thấy yêu cầu đặt hàng đặc biệt" });
+    }
+
+    // Check if florist owns the assigned shop
+    if (req.user.role === "florist") {
+      const shop = await Shop.findOne({ where: { florist_id: req.user.id } });
+      if (!shop || specialRequest.assigned_shop_id !== shop.id) {
+        return res
+          .status(403)
+          .json({ message: "Bạn không có quyền tạo đơn hàng từ yêu cầu này" });
+      }
+    }
+
+    // Check if special request is in processing status
+    if (specialRequest.status !== "processing") {
+      return res.status(400).json({
+        message: "Chỉ có thể tạo đơn hàng từ yêu cầu ở trạng thái 'processing'",
+      });
+    }
+
+    // Validate items if provided (for custom products)
+    if (items && Array.isArray(items) && items.length > 0) {
+      for (const item of items) {
+        const product = await Product.findByPk(item.product_id);
+        if (!product || product.stock < item.quantity) {
+          return res
+            .status(400)
+            .json({ message: `Insufficient stock for ${product?.name}` });
+        }
+      }
+    }
+
+    // Create order with special order information
+    const order = await Order.create({
+      user_id: specialRequest.user_id,
+      shop_id: specialRequest.assigned_shop_id,
+      total_amount: total_amount || specialRequest.budget || 0,
+      status: "pending",
+      shipping_address: specialRequest.shipping_address,
+      payment_method: payment_method || "cash",
+      payment_status: "pending",
+      notes: specialRequest.additional_notes,
+      is_special_order: 1,
+      special_request: JSON.stringify({
+        original_request_id: special_request_id,
+        product_name: specialRequest.product_name,
+        description: specialRequest.description,
+        category: specialRequest.category,
+        delivery_date: specialRequest.delivery_date,
+      }),
+    });
+
+    // Create order items if provided
+    if (items && Array.isArray(items) && items.length > 0) {
+      for (const item of items) {
+        const product = await Product.findByPk(item.product_id);
+        await OrderItem.create({
+          order_id: order.id,
+          product_id: item.product_id,
+          quantity: item.quantity,
+          price: product.price,
+        });
+
+        // Update product stock
+        await Product.update(
+          { stock: product.stock - item.quantity },
+          { where: { id: product.id } }
+        );
+      }
+    }
+
+    // Update shop pending_orders
+    await Shop.increment("pending_orders", {
+      by: 1,
+      where: { id: specialRequest.assigned_shop_id },
+    });
+
+    // Update special request status to completed
+    await specialRequest.update({ status: "completed" });
+
+    res.status(201).json({
+      message: "Đã tạo đơn hàng từ yêu cầu đặc biệt thành công",
+      order,
+      specialRequest: await SpecialOrderRequest.findByPk(special_request_id, {
+        include: [
+          { model: User, as: "customer", attributes: ["id", "name"] },
+          { model: Shop, as: "assignedShop", attributes: ["id", "name"] },
+        ],
+      }),
+    });
+  } catch (error) {
+    console.error("Error creating order from special request:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   createOrder,
   getUserOrders,
@@ -629,4 +765,5 @@ module.exports = {
   cancelOrder,
   updateShippingAddress,
   getSpecialOrders, // Add the new function to exports
+  createOrderFromSpecialRequest,
 };

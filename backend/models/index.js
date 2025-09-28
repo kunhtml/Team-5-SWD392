@@ -11,6 +11,7 @@ const ShopReview = require("./ShopReview");
 const ProductReview = require("./ProductReview");
 const WalletTransaction = require("./WalletTransaction");
 const WithdrawalRequest = require("./WithdrawalRequest");
+const SpecialOrderRequest = require("./SpecialOrderRequest");
 
 // Export all models
 const db = {
@@ -27,6 +28,7 @@ const db = {
   ProductReview,
   WalletTransaction,
   WithdrawalRequest,
+  SpecialOrderRequest,
 };
 
 // Call associate functions for all models

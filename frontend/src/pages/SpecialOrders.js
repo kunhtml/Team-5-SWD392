@@ -17,398 +17,376 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
-  MenuItem,
   Pagination,
   CircularProgress,
   Tabs,
   Tab,
 } from "@mui/material";
 
+const STATUS_LABELS = {
+  pending: "Chờ xử lý",
+  processing: "Đang xử lý",
+  completed: "Hoàn thành",
+  cancelled: "Đã hủy",
+};
+
+const STATUS_COLORS = {
+  pending: "warning",
+  processing: "info",
+  completed: "success",
+  cancelled: "error",
+};
+
+const PAGE_SIZE = 10;
+
+const formatCurrency = (value) => {
+  if (value === null || value === undefined) return "Chưa xác định";
+  const number = Number(value);
+  if (Number.isNaN(number)) return "Chưa xác định";
+  return `${number.toLocaleString("vi-VN", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })} VNĐ`;
+};
+
+const formatDate = (value) => {
+  if (!value) return "-";
+  try {
+    return new Date(value).toLocaleDateString("vi-VN");
+  } catch {
+    return value;
+  }
+};
+
 const SpecialOrders = () => {
-  const [tabValue, setTabValue] = useState(0); // 0 for pending orders, 1 for accepted orders
-  const [orders, setOrders] = useState([]);
-  const [acceptedOrders, setAcceptedOrders] = useState([]);
+  const [tabValue, setTabValue] = useState(0);
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [processingRequests, setProcessingRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [pages, setPages] = useState(1);
+  const [pendingPage, setPendingPage] = useState(1);
+  const [pendingPages, setPendingPages] = useState(1);
+  const [processingPage, setProcessingPage] = useState(1);
+  const [processingPages, setProcessingPages] = useState(1);
   const [selected, setSelected] = useState(null);
-  const [shipEdit, setShipEdit] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [shop, setShop] = useState(null);
 
   useEffect(() => {
-    if (tabValue === 0) {
-      fetchSpecialOrders({ page });
-    } else {
-      fetchAcceptedOrders({ page });
-    }
-  }, [page, tabValue]);
-
-  const fetchSpecialOrders = async ({ page = 1 } = {}) => {
-    try {
-      setLoading(true);
-      // Only fetch pending orders for the "Đơn Chờ Xử Lý" tab
-      const response = await api.get("/orders/special", {
-        params: { page, limit: 10, status: "pending" },
-      });
-      setOrders(response.data.orders || []);
-      setPages(response.data.pages || 1);
-    } catch (error) {
-      console.error("Error fetching special orders:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchAcceptedOrders = async ({ page = 1 } = {}) => {
-    try {
-      setLoading(true);
-      // Fetch orders with "processing" status (Đơn Đã Nhận Làm)
-      const response = await api.get("/orders/special", {
-        params: { page, limit: 10, status: "processing" },
-      });
-      setAcceptedOrders(response.data.orders || []);
-      setPages(response.data.pages || 1);
-    } catch (error) {
-      console.error("Error fetching accepted orders:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdateStatus = async (orderId, newStatus) => {
-    try {
-      setActionLoading(true);
-      await api.put(`/orders/${orderId}/status`, { status: newStatus });
-      
-      // If order is completed, add amount to seller's wallet
-      if (newStatus === "completed") {
-        // Find the order to get its amount and shop_id
-        let order;
-        if (tabValue === 0) {
-          order = orders.find(o => o.id === orderId);
+    const fetchFloristShop = async () => {
+      try {
+        const response = await api.get("/shops/my-shop", {
+          skipErrorLogging: true,
+        });
+        setShop(response.data.shop || null);
+      } catch (error) {
+        if (error.response?.status === 404) {
+          setShop(null);
         } else {
-          order = acceptedOrders.find(o => o.id === orderId);
-        }
-        
-        if (order) {
-          // Add order amount to seller's wallet
-          await api.post(`/wallets/${order.shop_id}/deposit`, {
-            amount: order.total_amount,
-            description: `Thanh toán đơn hàng #${orderId}`
-          });
+          console.error("Error fetching florist shop:", error);
+          setShop(null);
         }
       }
-      
-      // Refresh the appropriate data based on the active tab
+    };
+
+    fetchFloristShop();
+  }, []);
+
+  useEffect(() => {
+    fetchPendingRequests(pendingPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingPage]);
+
+  useEffect(() => {
+    if (tabValue !== 1) return;
+    fetchProcessingRequests(processingPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabValue, processingPage]);
+
+  const fetchPendingRequests = async (page = 1) => {
+    try {
+      setLoading(true);
+      const response = await api.get("/special-orders", {
+        params: { page, limit: PAGE_SIZE, status: "pending" },
+      });
+      setPendingRequests(response.data.specialRequests || []);
+      setPendingPages(Number(response.data.pages) || 1);
+    } catch (error) {
+      console.error("Error fetching pending special orders:", error);
+      setPendingRequests([]);
+      setPendingPages(1);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProcessingRequests = async (page = 1) => {
+    try {
+      setLoading(true);
+      const response = await api.get("/special-orders", {
+        params: { page, limit: PAGE_SIZE, status: "processing" },
+      });
+      setProcessingRequests(response.data.specialRequests || []);
+      setProcessingPages(Number(response.data.pages) || 1);
+    } catch (error) {
+      console.error("Error fetching accepted special orders:", error);
+      setProcessingRequests([]);
+      setProcessingPages(1);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTabChange = (_, newValue) => {
+    setTabValue(newValue);
+  };
+
+  const handleUpdateStatus = async (request, newStatus) => {
+    if (!request) return;
+
+    if (newStatus === "processing" && !shop?.id) {
+      alert("Không thể nhận yêu cầu vì chưa tìm thấy thông tin cửa hàng.");
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      const payload = { status: newStatus };
+      if (newStatus === "processing" && !request.assigned_shop_id && shop?.id) {
+        payload.assigned_shop_id = shop.id;
+      }
+
+      await api.put(`/special-orders/${request.id}/status`, payload);
+
       if (tabValue === 0) {
-        fetchSpecialOrders({ page });
+        fetchPendingRequests(pendingPage);
       } else {
-        fetchAcceptedOrders({ page });
+        fetchProcessingRequests(processingPage);
       }
       setSelected(null);
     } catch (error) {
-      console.error("Error updating order status:", error);
-      // Show error message to user
-      alert("Có lỗi xảy ra khi cập nhật trạng thái đơn hàng hoặc cộng tiền vào ví.");
+      console.error("Error updating special order status:", error);
+      alert("Có lỗi xảy ra khi cập nhật trạng thái yêu cầu đặc biệt.");
     } finally {
       setActionLoading(false);
     }
   };
 
-  if (loading) return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-      <CircularProgress />
-    </Box>
-  );
+  const renderActionButtons = (request, { size = "small" } = {}) => {
+    if (!request) return null;
+
+    const buttons = [];
+
+    if (request.status === "pending") {
+      buttons.push(
+        <Button
+          key="accept"
+          size={size}
+          color="primary"
+          variant="contained"
+          onClick={() => handleUpdateStatus(request, "processing")}
+          disabled={actionLoading}
+        >
+          {actionLoading ? "Đang xử lý..." : "Nhận Làm"}
+        </Button>
+      );
+    }
+
+    if (request.status === "processing") {
+      buttons.push(
+        <Button
+          key="complete"
+          size={size}
+          color="success"
+          variant="contained"
+          onClick={() => handleUpdateStatus(request, "completed")}
+          disabled={actionLoading}
+        >
+          {actionLoading ? "Đang xử lý..." : "Hoàn Thành"}
+        </Button>
+      );
+      buttons.push(
+        <Button
+          key="return"
+          size={size}
+          color="warning"
+          variant="outlined"
+          onClick={() => handleUpdateStatus(request, "pending")}
+          disabled={actionLoading}
+        >
+          {actionLoading ? "Đang xử lý..." : "Trả Lại"}
+        </Button>
+      );
+      buttons.push(
+        <Button
+          key="cancel"
+          size={size}
+          color="error"
+          variant="outlined"
+          onClick={() => handleUpdateStatus(request, "cancelled")}
+          disabled={actionLoading}
+        >
+          {actionLoading ? "Đang xử lý..." : "Hủy"}
+        </Button>
+      );
+    }
+
+    return buttons;
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  const currentRequests = tabValue === 0 ? pendingRequests : processingRequests;
+  const currentPages = tabValue === 0 ? pendingPages : processingPages;
+  const currentPage = tabValue === 0 ? pendingPage : processingPage;
 
   return (
     <Box sx={{ mt: 4 }}>
       <Typography variant="h4" gutterBottom>
-        Đơn Đặc Biệt
+        Yêu Cầu Đơn Đặc Biệt
       </Typography>
-      
-      <Tabs 
-        value={tabValue} 
-        onChange={(e, newValue) => setTabValue(newValue)}
-        sx={{ mb: 2 }}
-      >
+
+      {!shop && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Không tìm thấy thông tin cửa hàng. Bạn vẫn có thể xem yêu cầu nhưng
+          cần có cửa hàng để nhận xử lý.
+        </Typography>
+      )}
+
+      <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 2 }}>
         <Tab label="Đơn Chờ Xử Lý" />
         <Tab label="Đơn Đã Nhận Làm" />
       </Tabs>
 
-      {tabValue === 0 && (
-        <>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>ID</TableCell>
-                  <TableCell>Khách Hàng</TableCell>
-                  <TableCell>Ngày Đặt</TableCell>
-                  <TableCell>Tổng Tiền</TableCell>
-                  <TableCell>Trạng Thái</TableCell>
-                  <TableCell>Cửa Hàng</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {orders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell>{order.id}</TableCell>
-                    <TableCell>{order.customer?.name}</TableCell>
-                    <TableCell>
-                      {(() => {
-                        const d = order.createdAt || order.created_at;
-                        return d ? new Date(d).toLocaleDateString("vi-VN") : "-";
-                      })()}
-                    </TableCell>
-                    <TableCell>
-                      {parseFloat(order.total_amount).toLocaleString("vi-VN", {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 2,
-                      })}{" "}
-                      VNĐ
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={order.status}
-                        color={
-                          order.status === "completed"
-                            ? "success"
-                            : order.status === "pending"
-                            ? "warning"
-                            : "error"
-                        }
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>{order.shop?.name || "N/A"}</TableCell>
-                    <TableCell>
-                      <Stack direction="row" spacing={1}>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => {
-                            setSelected(order);
-                            setShipEdit(order.shipping_address || "");
-                          }}
-                        >
-                          Chi Tiết
-                        </Button>
-                        {order.status === "pending" && (
-                          <Button
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                            onClick={() => handleUpdateStatus(order.id, "processing")}
-                            disabled={actionLoading}
-                          >
-                            Nhận Làm
-                          </Button>
-                        )}
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          <Stack alignItems="center" sx={{ mt: 2 }}>
-            <Pagination count={pages} page={page} onChange={(_, p) => setPage(p)} />
-          </Stack>
-        </>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>ID</TableCell>
+              <TableCell>Sản phẩm mong muốn</TableCell>
+              <TableCell>Khách hàng</TableCell>
+              <TableCell>Danh mục</TableCell>
+              <TableCell>Ngân sách</TableCell>
+              <TableCell>Số lượng</TableCell>
+              <TableCell>Ngày giao dự kiến</TableCell>
+              <TableCell>Cửa hàng phụ trách</TableCell>
+              <TableCell>Trạng thái</TableCell>
+              <TableCell>Thao tác</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {currentRequests.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={10} align="center">
+                  Chưa có yêu cầu nào.
+                </TableCell>
+              </TableRow>
+            )}
+
+            {currentRequests.map((request) => (
+              <TableRow key={request.id}>
+                <TableCell>{request.id}</TableCell>
+                <TableCell>{request.product_name}</TableCell>
+                <TableCell>{request.customer?.name || "N/A"}</TableCell>
+                <TableCell>{request.category || "-"}</TableCell>
+                <TableCell>{formatCurrency(request.budget)}</TableCell>
+                <TableCell>{request.quantity || 1}</TableCell>
+                <TableCell>{formatDate(request.delivery_date)}</TableCell>
+                <TableCell>
+                  {request.assignedShop?.name || "Chưa phân công"}
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={STATUS_LABELS[request.status] || request.status}
+                    color={STATUS_COLORS[request.status] || "default"}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => setSelected(request)}
+                    >
+                      Chi tiết
+                    </Button>
+                    {renderActionButtons(request)}
+                  </Stack>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {currentPages > 1 && (
+        <Stack alignItems="center" sx={{ mt: 2 }}>
+          <Pagination
+            count={currentPages}
+            page={currentPage}
+            onChange={(_, p) =>
+              tabValue === 0 ? setPendingPage(p) : setProcessingPage(p)
+            }
+          />
+        </Stack>
       )}
 
-      {tabValue === 1 && (
-        <>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>ID</TableCell>
-                  <TableCell>Khách Hàng</TableCell>
-                  <TableCell>Ngày Đặt</TableCell>
-                  <TableCell>Tổng Tiền</TableCell>
-                  <TableCell>Trạng Thái</TableCell>
-                  <TableCell>Cửa Hàng</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {acceptedOrders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell>{order.id}</TableCell>
-                    <TableCell>{order.customer?.name}</TableCell>
-                    <TableCell>
-                      {(() => {
-                        const d = order.createdAt || order.created_at;
-                        return d ? new Date(d).toLocaleDateString("vi-VN") : "-";
-                      })()}
-                    </TableCell>
-                    <TableCell>
-                      {parseFloat(order.total_amount).toLocaleString("vi-VN", {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 2,
-                      })}{" "}
-                      VNĐ
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={order.status}
-                        color={
-                          order.status === "completed"
-                            ? "success"
-                            : order.status === "processing"
-                            ? "primary"
-                            : "error"
-                        }
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>{order.shop?.name || "N/A"}</TableCell>
-                    <TableCell>
-                      <Stack direction="row" spacing={1}>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => {
-                            setSelected(order);
-                            setShipEdit(order.shipping_address || "");
-                          }}
-                        >
-                          Chi Tiết
-                        </Button>
-                        {order.status === "processing" && (
-                          <Button
-                            size="small"
-                            color="success"
-                            variant="outlined"
-                            onClick={() => handleUpdateStatus(order.id, "completed")}
-                            disabled={actionLoading}
-                          >
-                            Hoàn Thành
-                          </Button>
-                        )}
-                        {order.status === "processing" && (
-                          <Button
-                            size="small"
-                            color="warning"
-                            variant="outlined"
-                            onClick={() => handleUpdateStatus(order.id, "pending")}
-                            disabled={actionLoading}
-                          >
-                            Trả Lại
-                          </Button>
-                        )}
-                        {order.status === "processing" && (
-                          <Button
-                            size="small"
-                            color="error"
-                            variant="outlined"
-                            onClick={() => handleUpdateStatus(order.id, "cancelled")}
-                            disabled={actionLoading}
-                          >
-                            Hủy
-                          </Button>
-                        )}
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          <Stack alignItems="center" sx={{ mt: 2 }}>
-            <Pagination count={pages} page={page} onChange={(_, p) => setPage(p)} />
-          </Stack>
-        </>
-      )}
-
-      {/* Order details dialog */}
       <Dialog
         open={!!selected}
         onClose={() => setSelected(null)}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Chi tiết đơn đặc biệt #{selected?.id}</DialogTitle>
+        <DialogTitle>Chi tiết yêu cầu #{selected?.id}</DialogTitle>
         <DialogContent dividers>
           {selected && (
-            <Box>
-              <Typography>Khách hàng: {selected.customer?.name}</Typography>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+              <Typography variant="subtitle1">Thông tin khách hàng</Typography>
+              <Typography>Họ tên: {selected.customer?.name || "-"}</Typography>
               <Typography>
-                Tổng tiền:{" "}
-                {parseFloat(selected.total_amount).toLocaleString("vi-VN")} VNĐ
+                Email: {selected.customer?.email || "Không có"}
               </Typography>
-              <Typography>Trạng thái: {selected.status}</Typography>
-              {selected.status === "pending" ||
-              selected.status === "processing" ? (
-                <Box sx={{ mt: 2 }}>
-                  <TextField
-                    label="Địa chỉ giao hàng"
-                    fullWidth
-                    multiline
-                    minRows={2}
-                    value={shipEdit}
-                    onChange={(e) => setShipEdit(e.target.value)}
-                  />
-                </Box>
-              ) : (
-                <Typography sx={{ mt: 2 }}>
-                  Địa chỉ: {selected.shipping_address}
-                </Typography>
-              )}
-              <Typography sx={{ mt: 2 }}>Yêu cầu đặc biệt:</Typography>
-              <Typography sx={{ mt: 1, fontStyle: 'italic' }}>
-                {selected.special_request || "Không có yêu cầu đặc biệt"}
+              <Typography>
+                Số điện thoại: {selected.customer?.phone || "Không có"}
               </Typography>
-              <Typography sx={{ mt: 2 }}>Sản phẩm:</Typography>
-              <ul>
-                {(selected.items || []).map((it) => (
-                  <li key={it.id}>
-                    {it.product?.name} x{it.quantity} —{" "}
-                    {parseFloat(it.price).toLocaleString("vi-VN")} VNĐ
-                  </li>
-                ))}
-              </ul>
+
+              <Typography variant="subtitle1" sx={{ mt: 2 }}>
+                Chi tiết yêu cầu
+              </Typography>
+              <Typography>
+                Sản phẩm mong muốn: {selected.product_name}
+              </Typography>
+              <Typography>Mô tả: {selected.description}</Typography>
+              <Typography>Danh mục: {selected.category || "-"}</Typography>
+              <Typography>
+                Ngân sách: {formatCurrency(selected.budget)}
+              </Typography>
+              <Typography>Số lượng: {selected.quantity || 1}</Typography>
+              <Typography>
+                Ngày giao dự kiến: {formatDate(selected.delivery_date)}
+              </Typography>
+              <Typography>
+                Địa chỉ giao hàng: {selected.shipping_address || "-"}
+              </Typography>
+              <Typography>
+                Ghi chú thêm: {selected.additional_notes || "Không có"}
+              </Typography>
+              <Typography>
+                Cửa hàng phụ trách:{" "}
+                {selected.assignedShop?.name || "Chưa phân công"}
+              </Typography>
             </Box>
           )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSelected(null)}>Đóng</Button>
-          {selected &&
-            (selected.status === "pending" ||
-              selected.status === "processing") && (
-              <>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => handleUpdateStatus(selected.id, "processing")}
-                  disabled={actionLoading}
-                >
-                  {actionLoading ? <CircularProgress size={24} /> : "Xử Lý"}
-                </Button>
-                <Button
-                  variant="contained"
-                  color="error"
-                  onClick={() => handleUpdateStatus(selected.id, "cancelled")}
-                  disabled={actionLoading}
-                >
-                  {actionLoading ? <CircularProgress size={24} /> : "Hủy"}
-                </Button>
-              </>
-            )}
-          {selected && selected.status === "processing" && (
-            <Button
-              variant="contained"
-              color="success"
-              onClick={() => handleUpdateStatus(selected.id, "completed")}
-              disabled={actionLoading}
-            >
-              {actionLoading ? <CircularProgress size={24} /> : "Hoàn Thành"}
-            </Button>
-          )}
+          {renderActionButtons(selected, { size: "medium" })}
         </DialogActions>
       </Dialog>
     </Box>

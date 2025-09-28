@@ -32,7 +32,10 @@ const Products = () => {
   const [snackbarMessage, setSnackbarMessage] = useState(""); // Added message state
   const [quantities, setQuantities] = useState({});
   // State for admin restriction notification
-  const [adminNotification, setAdminNotification] = useState({ open: false, message: "" });
+  const [adminNotification, setAdminNotification] = useState({
+    open: false,
+    message: "",
+  });
   const dispatch = useDispatch();
   const navigate = useNavigate();
   // Get user information from Redux store
@@ -87,11 +90,12 @@ const Products = () => {
     if (isAdmin) {
       setAdminNotification({
         open: true,
-        message: "Chức năng không cho phép sử dụng khi bạn đang đăng nhập bằng tài khoản quản trị viên",
+        message:
+          "Chức năng không cho phép sử dụng khi bạn đang đăng nhập bằng tài khoản quản trị viên",
       });
       return;
     }
-    
+
     const quantity = getQuantity(product.id);
     dispatch(
       addToCart({
@@ -113,11 +117,12 @@ const Products = () => {
     if (isAdmin) {
       setAdminNotification({
         open: true,
-        message: "Chức năng không cho phép sử dụng khi bạn đang đăng nhập bằng tài khoản quản trị viên",
+        message:
+          "Chức năng không cho phép sử dụng khi bạn đang đăng nhập bằng tài khoản quản trị viên",
       });
       return;
     }
-    
+
     const quantity = getQuantity(product.id);
     dispatch(
       addToCart({
@@ -406,7 +411,7 @@ const Products = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
-      
+
       {/* Admin restriction notification */}
       <Snackbar
         open={adminNotification.open}
@@ -414,7 +419,11 @@ const Products = () => {
         onClose={handleCloseAdminNotification}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert onClose={handleCloseAdminNotification} severity="warning" sx={{ width: "100%" }}>
+        <Alert
+          onClose={handleCloseAdminNotification}
+          severity="warning"
+          sx={{ width: "100%" }}
+        >
           {adminNotification.message}
         </Alert>
       </Snackbar>

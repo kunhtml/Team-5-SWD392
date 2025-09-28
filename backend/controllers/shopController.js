@@ -182,8 +182,9 @@ const getMyShop = async (req, res) => {
     }
 
     const shop = await Shop.findOne({ where: { florist_id: req.user.id } });
+
     if (!shop) {
-      return res.status(404).json({ message: "No shop found" });
+      return res.json({ shop: null, message: "No shop found" });
     }
 
     res.json({ shop });

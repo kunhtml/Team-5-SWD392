@@ -8,12 +8,25 @@ const {
   getShopOrders,
   updateShippingAddress,
   getSpecialOrders, // Import the new function
+  createOrderFromSpecialRequest,
 } = require("../controllers/orderController");
 
 const router = express.Router();
 
 // Customer routes
-router.post("/", authMiddleware, roleAuth(["customer"]), createOrder);
+router.post(
+  "/",
+  authMiddleware,
+  roleAuth(["customer", "florist"]),
+  createOrder
+);
+// Create order from special request (florist/admin only)
+router.post(
+  "/from-special",
+  authMiddleware,
+  roleAuth(["florist", "admin"]),
+  createOrderFromSpecialRequest
+);
 router.get(
   "/",
   authMiddleware,

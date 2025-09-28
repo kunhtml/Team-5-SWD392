@@ -151,7 +151,11 @@ const Chatbot = ({ suggestions = defaultSuggestions }) => {
                 Hỗ trợ trực tuyến 24/7
               </Typography>
             </Box>
-            <IconButton onClick={handleToggle} size="small" sx={{ color: "inherit" }}>
+            <IconButton
+              onClick={handleToggle}
+              size="small"
+              sx={{ color: "inherit" }}
+            >
               <CloseIcon fontSize="small" />
             </IconButton>
           </Box>
@@ -185,9 +189,7 @@ const Chatbot = ({ suggestions = defaultSuggestions }) => {
                     lineHeight: 1.5,
                     whiteSpace: "pre-line",
                     backgroundColor:
-                      message.sender === "user"
-                        ? "primary.main"
-                        : "white",
+                      message.sender === "user" ? "primary.main" : "white",
                     color: message.sender === "user" ? "white" : "text.primary",
                     boxShadow:
                       message.sender === "user"
@@ -212,7 +214,15 @@ const Chatbot = ({ suggestions = defaultSuggestions }) => {
 
           <Divider />
 
-          <Box sx={{ px: 2, py: 2, display: "flex", flexDirection: "column", gap: 1.25 }}>
+          <Box
+            sx={{
+              px: 2,
+              py: 2,
+              display: "flex",
+              flexDirection: "column",
+              gap: 1.25,
+            }}
+          >
             <Box sx={{ display: "flex", gap: 1 }}>
               <TextField
                 fullWidth

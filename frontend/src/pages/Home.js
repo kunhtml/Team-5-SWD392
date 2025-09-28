@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import LazyWelcome from "../components/LazyWelcome";
 import {
   Box,
   Typography,
@@ -32,6 +33,7 @@ import { addToCart } from "../store/slices/cartSlice";
 import Chatbot from "../components/Chatbot";
 
 const Home = () => {
+  const [showWelcome, setShowWelcome] = useState(true);
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -126,13 +128,24 @@ const Home = () => {
     setSnackbarOpen(false);
   };
 
+  const handleWelcomeProceed = () => {
+    setShowWelcome(false);
+  };
+
+  if (showWelcome) {
+    return <LazyWelcome onProceed={handleWelcomeProceed} />;
+  }
+
   return (
     <Box sx={{ mt: 2 }}>
       {/* Hero Section */}
       <Box
         sx={{
           py: { xs: 8, md: 12 },
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          backgroundImage: `url('/images/16240.jpg')`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
           color: "white",
           position: "relative",
           overflow: "hidden",
