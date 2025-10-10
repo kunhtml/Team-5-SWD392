@@ -1,40 +1,28 @@
+import api from "../services/api";
+
 /**
- * Upload image to FreeImage.host
+ * Upload image through backend proxy to FreeImage.host
  * @param {File} file - The image file to upload
  * @returns {Promise<string>} - The URL of the uploaded image
  */
 export const uploadImageToFreeImage = async (file) => {
   try {
-    const apiKey = process.env.REACT_APP_FREEIMAGE_KEY;
-
-    if (!apiKey) {
-      throw new Error("Thiếu REACT_APP_FREEIMAGE_KEY trong .env");
-    }
+    console.log("📤 Uploading image to FreeImage.host via backend...");
 
     const formData = new FormData();
-    formData.append("key", apiKey);
-    formData.append("action", "upload");
-    formData.append("source", file);
-    formData.append("format", "json");
+    formData.append("image", file);
 
-    console.log("📤 Uploading image to FreeImage.host...");
-
-    const response = await fetch("https://freeimage.host/api/1/upload", {
-      method: "POST",
-      body: formData,
+    const response = await api.post("/upload/image", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     });
 
-    if (!response.ok) {
-      throw new Error(`Upload failed with status: ${response.status}`);
+    if (!response.data.success) {
+      throw new Error(response.data.message || "Upload failed");
     }
 
-    const data = await response.json();
-
-    if (data.status_code !== 200) {
-      throw new Error(data.error?.message || "Upload failed");
-    }
-
-    const imageUrl = data.image.url;
+    const imageUrl = response.data.url;
     console.log("✅ Image uploaded successfully:", imageUrl);
 
     return imageUrl;
@@ -51,40 +39,20 @@ export const uploadImageToFreeImage = async (file) => {
  */
 export const uploadImageBase64 = async (file) => {
   try {
-    const apiKey = process.env.REACT_APP_FREEIMAGE_KEY;
-
-    if (!apiKey) {
-      throw new Error("Thiếu REACT_APP_FREEIMAGE_KEY trong .env");
-    }
+    console.log("📤 Uploading image (base64) to FreeImage.host via backend...");
 
     // Convert file to base64
     const base64 = await fileToBase64(file);
-    const base64Data = base64.split(",")[1]; // Remove data:image/...;base64, prefix
 
-    const formData = new FormData();
-    formData.append("key", apiKey);
-    formData.append("action", "upload");
-    formData.append("source", base64Data);
-    formData.append("format", "json");
-
-    console.log("📤 Uploading image (base64) to FreeImage.host...");
-
-    const response = await fetch("https://freeimage.host/api/1/upload", {
-      method: "POST",
-      body: formData,
+    const response = await api.post("/upload/image-base64", {
+      image: base64,
     });
 
-    if (!response.ok) {
-      throw new Error(`Upload failed with status: ${response.status}`);
+    if (!response.data.success) {
+      throw new Error(response.data.message || "Upload failed");
     }
 
-    const data = await response.json();
-
-    if (data.status_code !== 200) {
-      throw new Error(data.error?.message || "Upload failed");
-    }
-
-    const imageUrl = data.image.url;
+    const imageUrl = response.data.url;
     console.log("✅ Image uploaded successfully:", imageUrl);
 
     return imageUrl;

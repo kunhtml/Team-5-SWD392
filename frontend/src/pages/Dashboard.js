@@ -37,6 +37,10 @@ import PersonIcon from "@mui/icons-material/Person";
 import EmailIcon from "@mui/icons-material/Email";
 import PhoneIcon from "@mui/icons-material/Phone";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
+import LockIcon from "@mui/icons-material/Lock";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
+import InputAdornment from "@mui/material/InputAdornment";
 
 const Dashboard = () => {
   const dispatch = useDispatch();
@@ -49,6 +53,16 @@ const Dashboard = () => {
     phone: "",
     address: "",
     avatar_url: "",
+  });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showPassword, setShowPassword] = useState({
+    current: false,
+    new: false,
+    confirm: false,
   });
   const [uploading, setUploading] = useState(false);
   const navigate = useNavigate();
@@ -65,7 +79,7 @@ const Dashboard = () => {
       // Fetch orders count
       const ordersRes = await api.get("/orders");
       const myOrders = ordersRes.data.orders || [];
-      
+
       // Fetch wallet balance
       const walletRes = await api.get("/wallet/balance");
       const balance = walletRes.data.wallet?.balance || 0;
@@ -93,6 +107,11 @@ const Dashboard = () => {
       address: user.address || "",
       avatar_url: user.avatar_url || "",
     });
+    setPasswordForm({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
     setEditOpen(true);
   };
 
@@ -102,9 +121,52 @@ const Dashboard = () => {
         window.alert("Tên là bắt buộc");
         return;
       }
+
+      // Check if user wants to change password
+      if (
+        passwordForm.currentPassword ||
+        passwordForm.newPassword ||
+        passwordForm.confirmPassword
+      ) {
+        // Validate password fields
+        if (!passwordForm.currentPassword) {
+          window.alert("Vui lòng nhập mật khẩu hiện tại");
+          return;
+        }
+        if (!passwordForm.newPassword) {
+          window.alert("Vui lòng nhập mật khẩu mới");
+          return;
+        }
+        if (passwordForm.newPassword.length < 6) {
+          window.alert("Mật khẩu mới phải có ít nhất 6 ký tự");
+          return;
+        }
+        if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+          window.alert("Mật khẩu mới và xác nhận mật khẩu không khớp");
+          return;
+        }
+
+        // Update password
+        try {
+          await api.put("/users/change-password", {
+            currentPassword: passwordForm.currentPassword,
+            newPassword: passwordForm.newPassword,
+          });
+          window.alert("Thay đổi mật khẩu thành công!");
+        } catch (error) {
+          window.alert(
+            error.response?.data?.message ||
+              "Không thể thay đổi mật khẩu. Vui lòng kiểm tra lại mật khẩu hiện tại."
+          );
+          return;
+        }
+      }
+
+      // Update profile
       await api.put("/users/profile", form);
       await dispatch(fetchUserFromToken());
       setEditOpen(false);
+      window.alert("Cập nhật thông tin thành công!");
     } catch (e) {
       console.error("Cập nhật thông tin thất bại:", e);
       window.alert("Không thể cập nhật. Vui lòng thử lại.");
@@ -192,11 +254,11 @@ const Dashboard = () => {
                       ? user.name.charAt(0).toUpperCase()
                       : null}
                   </Avatar>
-                  
+
                   <Typography variant="h5" fontWeight={700} gutterBottom>
                     {user.name}
                   </Typography>
-                  
+
                   <Chip
                     icon={<PersonIcon />}
                     label="Khách hàng"
@@ -216,25 +278,29 @@ const Dashboard = () => {
                     </Box>
 
                     {user.phone && (
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
                         <PhoneIcon fontSize="small" color="action" />
-                        <Typography variant="body2">
-                          {user.phone}
-                        </Typography>
+                        <Typography variant="body2">{user.phone}</Typography>
                       </Box>
                     )}
 
                     {user.address && (
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
                         <LocationOnIcon fontSize="small" color="action" />
-                        <Typography variant="body2">
-                          {user.address}
-                        </Typography>
+                        <Typography variant="body2">{user.address}</Typography>
                       </Box>
                     )}
 
                     {(!user.phone || !user.address) && (
-                      <Typography variant="caption" color="text.secondary" sx={{ fontStyle: "italic" }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ fontStyle: "italic" }}
+                      >
                         {!user.phone && "📞 Chưa cập nhật số điện thoại"}
                         {!user.phone && !user.address && <br />}
                         {!user.address && "📍 Chưa cập nhật địa chỉ"}
@@ -275,7 +341,8 @@ const Dashboard = () => {
                     elevation={2}
                     sx={{
                       borderRadius: 3,
-                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                      background:
+                        "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                       color: "white",
                       cursor: "pointer",
                       transition: "transform 0.2s",
@@ -287,12 +354,28 @@ const Dashboard = () => {
                     onClick={() => navigate("/orders")}
                   >
                     <CardContent>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
                         <Box>
                           <Typography variant="h4" fontWeight={700}>
-                            {loading ? <CircularProgress size={32} sx={{ color: "white" }} /> : stats.orders}
+                            {loading ? (
+                              <CircularProgress
+                                size={32}
+                                sx={{ color: "white" }}
+                              />
+                            ) : (
+                              stats.orders
+                            )}
                           </Typography>
-                          <Typography variant="body1" sx={{ opacity: 0.9, mt: 1 }}>
+                          <Typography
+                            variant="body1"
+                            sx={{ opacity: 0.9, mt: 1 }}
+                          >
                             Đơn hàng
                           </Typography>
                         </Box>
@@ -310,7 +393,8 @@ const Dashboard = () => {
                     elevation={2}
                     sx={{
                       borderRadius: 3,
-                      background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+                      background:
+                        "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
                       color: "white",
                       cursor: "pointer",
                       transition: "transform 0.2s",
@@ -322,16 +406,34 @@ const Dashboard = () => {
                     onClick={() => navigate("/wallet/balance")}
                   >
                     <CardContent>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
                         <Box>
                           <Typography variant="h4" fontWeight={700}>
-                            {loading ? <CircularProgress size={32} sx={{ color: "white" }} /> : `${stats.wallet.toLocaleString()}đ`}
+                            {loading ? (
+                              <CircularProgress
+                                size={32}
+                                sx={{ color: "white" }}
+                              />
+                            ) : (
+                              `${stats.wallet.toLocaleString()}đ`
+                            )}
                           </Typography>
-                          <Typography variant="body1" sx={{ opacity: 0.9, mt: 1 }}>
+                          <Typography
+                            variant="body1"
+                            sx={{ opacity: 0.9, mt: 1 }}
+                          >
                             Số dư ví
                           </Typography>
                         </Box>
-                        <AccountBalanceWalletIcon sx={{ fontSize: 64, opacity: 0.3 }} />
+                        <AccountBalanceWalletIcon
+                          sx={{ fontSize: 64, opacity: 0.3 }}
+                        />
                       </Box>
                     </CardContent>
                   </Card>
@@ -343,10 +445,15 @@ const Dashboard = () => {
                 <Fade in timeout={1600}>
                   <Card elevation={2} sx={{ borderRadius: 3 }}>
                     <CardContent sx={{ p: 3 }}>
-                      <Typography variant="h6" fontWeight={700} gutterBottom sx={{ mb: 3 }}>
+                      <Typography
+                        variant="h6"
+                        fontWeight={700}
+                        gutterBottom
+                        sx={{ mb: 3 }}
+                      >
                         🚀 Hành động nhanh
                       </Typography>
-                      
+
                       <Grid container spacing={2}>
                         <Grid item xs={12} sm={6} md={3}>
                           <Button
@@ -416,9 +523,11 @@ const Dashboard = () => {
                               borderRadius: 2,
                               textTransform: "none",
                               fontWeight: 600,
-                              background: "linear-gradient(45deg, #667eea, #764ba2)",
+                              background:
+                                "linear-gradient(45deg, #667eea, #764ba2)",
                               "&:hover": {
-                                background: "linear-gradient(45deg, #5a67d8, #6b5b95)",
+                                background:
+                                  "linear-gradient(45deg, #5a67d8, #6b5b95)",
                               },
                             }}
                           >
@@ -436,7 +545,10 @@ const Dashboard = () => {
           {/* Info Card */}
           <Grid item xs={12}>
             <Fade in timeout={1800}>
-              <Paper elevation={1} sx={{ p: 3, bgcolor: "info.50", borderRadius: 3 }}>
+              <Paper
+                elevation={1}
+                sx={{ p: 3, bgcolor: "info.50", borderRadius: 3 }}
+              >
                 <Typography variant="h6" fontWeight={600} gutterBottom>
                   💡 Bạn có biết?
                 </Typography>
@@ -461,7 +573,7 @@ const Dashboard = () => {
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: 3 }
+          sx: { borderRadius: 3 },
         }}
       >
         <DialogTitle sx={{ fontWeight: 700, fontSize: "1.5rem" }}>
@@ -492,14 +604,138 @@ const Dashboard = () => {
               fullWidth
               placeholder="Số nhà, đường, phường, quận, thành phố"
             />
-            
+
             <Divider />
-            
+
+            <Box>
+              <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                🔒 Thay đổi mật khẩu (tùy chọn)
+              </Typography>
+              <Stack spacing={2} sx={{ mt: 2 }}>
+                <TextField
+                  label="Mật khẩu hiện tại"
+                  type={showPassword.current ? "text" : "password"}
+                  value={passwordForm.currentPassword}
+                  onChange={(e) =>
+                    setPasswordForm({
+                      ...passwordForm,
+                      currentPassword: e.target.value,
+                    })
+                  }
+                  fullWidth
+                  placeholder="Nhập mật khẩu hiện tại"
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() =>
+                            setShowPassword({
+                              ...showPassword,
+                              current: !showPassword.current,
+                            })
+                          }
+                          edge="end"
+                        >
+                          {showPassword.current ? (
+                            <VisibilityOff />
+                          ) : (
+                            <Visibility />
+                          )}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+                <TextField
+                  label="Mật khẩu mới"
+                  type={showPassword.new ? "text" : "password"}
+                  value={passwordForm.newPassword}
+                  onChange={(e) =>
+                    setPasswordForm({
+                      ...passwordForm,
+                      newPassword: e.target.value,
+                    })
+                  }
+                  fullWidth
+                  placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() =>
+                            setShowPassword({
+                              ...showPassword,
+                              new: !showPassword.new,
+                            })
+                          }
+                          edge="end"
+                        >
+                          {showPassword.new ? (
+                            <VisibilityOff />
+                          ) : (
+                            <Visibility />
+                          )}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+                <TextField
+                  label="Xác nhận mật khẩu mới"
+                  type={showPassword.confirm ? "text" : "password"}
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) =>
+                    setPasswordForm({
+                      ...passwordForm,
+                      confirmPassword: e.target.value,
+                    })
+                  }
+                  fullWidth
+                  placeholder="Nhập lại mật khẩu mới"
+                  error={
+                    passwordForm.confirmPassword &&
+                    passwordForm.newPassword !== passwordForm.confirmPassword
+                  }
+                  helperText={
+                    passwordForm.confirmPassword &&
+                    passwordForm.newPassword !== passwordForm.confirmPassword
+                      ? "Mật khẩu không khớp"
+                      : ""
+                  }
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() =>
+                            setShowPassword({
+                              ...showPassword,
+                              confirm: !showPassword.confirm,
+                            })
+                          }
+                          edge="end"
+                        >
+                          {showPassword.confirm ? (
+                            <VisibilityOff />
+                          ) : (
+                            <Visibility />
+                          )}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Stack>
+            </Box>
+
+            <Divider />
+
             <Box>
               <Typography variant="subtitle2" fontWeight={600} gutterBottom>
                 Ảnh đại diện
               </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1 }}>
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1 }}
+              >
                 <Button
                   variant="outlined"
                   component="label"
@@ -532,7 +768,10 @@ const Dashboard = () => {
           </Stack>
         </DialogContent>
         <DialogActions sx={{ p: 2.5 }}>
-          <Button onClick={() => setEditOpen(false)} sx={{ textTransform: "none" }}>
+          <Button
+            onClick={() => setEditOpen(false)}
+            sx={{ textTransform: "none" }}
+          >
             Hủy
           </Button>
           <Button

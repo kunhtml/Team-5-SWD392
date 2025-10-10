@@ -14,6 +14,7 @@ const shopRoutes = require("./routes/shops");
 const orderRoutes = require("./routes/orders");
 const walletRoutes = require("./routes/wallet");
 const specialOrderRoutes = require("./routes/specialOrders");
+const uploadRoutes = require("./routes/upload");
 
 // Import models for seeding
 const {
@@ -55,6 +56,7 @@ app.use("/api/shops", shopRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/special-orders", specialOrderRoutes);
+app.use("/api/upload", uploadRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
@@ -223,7 +225,7 @@ sequelize
         delivery_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
         shipping_address: "123 Customer Street, Hanoi",
         additional_notes: "Cần giao hàng vào buổi sáng sớm",
-        status: "pending"
+        status: "pending",
       });
 
       await SpecialOrderRequest.create({
@@ -237,7 +239,7 @@ sequelize
         shipping_address: "789 Customer Road, Hanoi",
         additional_notes: "Muốn có thiệp chúc mừng",
         status: "processing",
-        assigned_shop_id: shop.id
+        assigned_shop_id: shop.id,
       });
 
       await SpecialOrderRequest.create({
@@ -250,7 +252,7 @@ sequelize
         delivery_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10 days from now
         shipping_address: "456 Corporate Building, Hanoi",
         additional_notes: "Cần có banner chúc mừng khai trương",
-        status: "completed"
+        status: "completed",
       });
 
       console.log("✅ Sample data seeded successfully!");

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import logger from "../utils/logger";
 import {
@@ -29,8 +30,10 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
 
 const SpecialOrderHistory = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -278,9 +281,30 @@ const SpecialOrderHistory = () => {
 
   return (
     <Box sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Đơn Hàng Đặc Biệt Đã Tạo
-      </Typography>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
+        <Typography variant="h4">Đơn Hàng Đặc Biệt Đã Tạo</Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={() => navigate("/order-request")}
+          sx={{
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            "&:hover": {
+              background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
+            },
+          }}
+        >
+          Tạo Đơn Mới
+        </Button>
+      </Box>
 
       <TableContainer component={Paper}>
         <Table>
