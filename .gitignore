@@ -5,9 +5,11 @@ frontend/node_modules/
 
 # Environment variables
 .env
-
 backend/.env
 frontend/.env
+.env.local
+backend/.env.local
+frontend/.env.local
 
 # Logs
 logs/
@@ -64,3 +66,6 @@ frontend/.cache/
 
 # Misc
 *.local
+
+# Keep helper scripts committed
+!install.bat

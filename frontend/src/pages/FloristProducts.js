@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../services/api";
+import { uploadImageToFreeImage } from "../utils/uploadImage";
 import {
   Box,
   Typography,
@@ -128,22 +129,7 @@ const FloristProducts = () => {
       }
       let uploadedUrl = null;
       if (imageFile) {
-        const imgbbKey = process.env.REACT_APP_IMGBB_KEY;
-        if (!imgbbKey) {
-          throw new Error("Thiếu REACT_APP_IMGBB_KEY trong env");
-        }
-        const formData = new FormData();
-        formData.append("key", imgbbKey);
-        formData.append("image", imageFile);
-        const res = await fetch("https://api.imgbb.com/1/upload", {
-          method: "POST",
-          body: formData,
-        });
-        const data = await res.json();
-        if (!data || !data.success) {
-          throw new Error("Tải ảnh lên thất bại");
-        }
-        uploadedUrl = data.data?.url || data.data?.display_url;
+        uploadedUrl = await uploadImageToFreeImage(imageFile);
       }
 
       const payload = {
@@ -179,18 +165,7 @@ const FloristProducts = () => {
       }
       let uploadedUrl = null;
       if (editImageFile) {
-        const imgbbKey = process.env.REACT_APP_IMGBB_KEY;
-        if (!imgbbKey) throw new Error("Thiếu REACT_APP_IMGBB_KEY trong env");
-        const fd = new FormData();
-        fd.append("key", imgbbKey);
-        fd.append("image", editImageFile);
-        const res = await fetch("https://api.imgbb.com/1/upload", {
-          method: "POST",
-          body: fd,
-        });
-        const data = await res.json();
-        if (!data?.success) throw new Error("Tải ảnh lên thất bại");
-        uploadedUrl = data.data?.url || data.data?.display_url;
+        uploadedUrl = await uploadImageToFreeImage(editImageFile);
       }
 
       const payload = {

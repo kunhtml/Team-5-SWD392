@@ -62,7 +62,11 @@ const Header = () => {
             </Button>
           )}
           {user && user.role === "florist" && (
-            <Button color="inherit" component={Link} to="/florist/special-orders">
+            <Button
+              color="inherit"
+              component={Link}
+              to="/florist/special-orders"
+            >
               Đơn Đặc Biệt
             </Button>
           )}
@@ -114,8 +118,7 @@ const Header = () => {
                     Dashboard
                   </MenuItem>
                 )}
-                
-                
+
                 {user.role === "admin" && (
                   <MenuItem
                     component={Link}
@@ -134,7 +137,16 @@ const Header = () => {
                     Cửa hàng của tôi
                   </MenuItem>
                 )}
-                
+                {user.role === "florist" && (
+                  <MenuItem
+                    component={Link}
+                    to="/florist/shop-edit"
+                    onClick={handleMenuClose}
+                  >
+                    Chỉnh sửa thông tin
+                  </MenuItem>
+                )}
+
                 <Divider />
                 <MenuItem
                   onClick={() => {

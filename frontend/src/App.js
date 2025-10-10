@@ -21,6 +21,7 @@ import AdminPosts from "./pages/AdminPosts";
 import AdminSpecialOrders from "./pages/AdminSpecialOrders";
 import FloristDashboard from "./pages/FloristDashboard";
 import FloristProducts from "./pages/FloristProducts";
+import FloristShopEdit from "./pages/FloristShopEdit";
 import SpecialOrders from "./pages/SpecialOrders";
 import SpecialOrderHistory from "./pages/SpecialOrderHistory";
 import AdminUserEdit from "./pages/AdminUserEdit";
@@ -153,6 +154,14 @@ function App() {
           }
         />
         <Route
+          path="/florist/shop-edit"
+          element={
+            <ProtectedRoute roles={["florist"]}>
+              <FloristShopEdit />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/florist/products"
           element={
             <ProtectedRoute roles={["florist", "admin"]}>
@@ -171,7 +180,7 @@ function App() {
         <Route
           path="/special-order-history"
           element={
-            <ProtectedRoute roles={["customer"]} >
+            <ProtectedRoute roles={["customer"]}>
               <SpecialOrderHistory />
             </ProtectedRoute>
           }

@@ -175,6 +175,8 @@ CREATE TABLE orders (
     payment_method ENUM('cash', 'card', 'wallet', 'bank_transfer') DEFAULT 'cash',
     payment_status ENUM('pending', 'paid', 'failed', 'refunded') DEFAULT 'pending',
     notes TEXT,
+    is_special_order TINYINT DEFAULT 0 COMMENT '0 = Regular order, 1 = Special order',
+    special_request TEXT COMMENT 'Special requirements for the order',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
@@ -182,7 +184,8 @@ CREATE TABLE orders (
     INDEX idx_user_id (user_id),
     INDEX idx_shop_id (shop_id),
     INDEX idx_status (status),
-    INDEX idx_payment_status (payment_status)
+    INDEX idx_payment_status (payment_status),
+    INDEX idx_is_special_order (is_special_order)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Order Items (products in orders)
@@ -196,6 +199,30 @@ CREATE TABLE order_items (
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
     INDEX idx_order_id (order_id),
     INDEX idx_product_id (product_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Special Order Requests table (for customer requests for special orders)
+CREATE TABLE special_order_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    product_name VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    category VARCHAR(100),
+    budget DECIMAL(10,2),
+    quantity INT DEFAULT 1,
+    delivery_date DATE,
+    shipping_address TEXT NOT NULL,
+    additional_notes TEXT,
+    status ENUM('pending', 'processing', 'completed', 'cancelled') DEFAULT 'pending',
+    assigned_shop_id INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_shop_id) REFERENCES shops(id) ON DELETE SET NULL,
+    INDEX idx_user_id (user_id),
+    INDEX idx_assigned_shop_id (assigned_shop_id),
+    INDEX idx_status (status),
+    INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Wallet table (user balances)
@@ -369,6 +396,11 @@ INSERT INTO shop_reviews (user_id, shop_id, rating, comment, status) VALUES
 INSERT INTO product_reviews (user_id, product_id, shop_id, order_id, rating, comment, status) VALUES
 (3, 1, 1, 1, 5, 'Hoa hồng đẹp từ Demo Flower Shop, giao hàng nhanh!', 'approved'),  -- Review for product 1, shop 1
 (3, 2, 1, NULL, 4, 'Hoa cúc tươi từ Demo Flower Shop, giá hợp lý.', 'approved');  -- Review for product 2, shop 1
+
+-- Sample Special Order Requests
+INSERT INTO special_order_requests (user_id, product_name, description, category, budget, quantity, delivery_date, shipping_address, additional_notes) VALUES
+(3, 'Custom Birthday Bouquet', 'A custom bouquet with red roses and white lilies for a birthday', 'Hoa Sinh Nhật', 500000.00, 1, '2023-12-25', '456 Customer Street, Hanoi', 'Please deliver in the morning'),
+(3, 'Wedding Flower Arrangement', 'Elegant white and pink flower arrangement for wedding ceremony', 'Hoa Cưới', 1500000.00, 2, '2024-01-15', '789 Wedding Venue, Hanoi', 'Need to match wedding theme colors');
 
 -- =====================================================
 -- Step 7: Populate Shop Stats from Data (FIXED: JOINs + WHERE clauses)
@@ -621,6 +653,7 @@ SELECT 'Products Count' AS info, COUNT(*) AS count FROM products;
 SELECT 'Orders Count' AS info, COUNT(*) AS count FROM orders;
 SELECT 'Shop Reviews Count' AS info, COUNT(*) AS count FROM shop_reviews;
 SELECT 'Product Reviews Count' AS info, COUNT(*) AS count FROM product_reviews;
+SELECT 'Special Order Requests Count' AS info, COUNT(*) AS count FROM special_order_requests;
 
 -- NEW: Verify all users (including new admin)
 SELECT id, name, email, role, LEFT(password, 30) AS password_preview, status FROM users ORDER BY id;
@@ -659,6 +692,18 @@ ORDER BY EVENT_OBJECT_TABLE, TRIGGER_NAME;
 SELECT 'Shop Stats After Fix' AS info, 
        id, name, total_revenue, total_products, pending_orders, completed_orders, average_rating, total_reviews, average_product_rating, total_product_reviews 
 FROM shops;
+
+-- Verify new columns in orders table
+SELECT 'Orders Table Structure' AS info;
+DESCRIBE orders;
+
+-- Verify special_order_requests table
+SELECT 'Special Order Requests Table Structure' AS info;
+DESCRIBE special_order_requests;
+
+-- Show sample special order requests
+SELECT 'Sample Special Order Requests' AS info;
+SELECT * FROM special_order_requests LIMIT 5;
 
 -- =====================================================
 -- COMMIT AND CLEANUP

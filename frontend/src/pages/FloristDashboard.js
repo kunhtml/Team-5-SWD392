@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { uploadImageToFreeImage } from "../utils/uploadImage";
 import {
   Box,
   Typography,
@@ -24,8 +25,21 @@ import {
   CircularProgress,
   MenuItem,
   Stack,
+  Card,
+  CardContent,
+  Grid,
+  Chip,
+  Fade,
+  Container,
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import StorefrontIcon from "@mui/icons-material/Storefront";
+import InventoryIcon from "@mui/icons-material/Inventory";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import EditIcon from "@mui/icons-material/Edit";
+import AddIcon from "@mui/icons-material/Add";
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import RefreshIcon from "@mui/icons-material/Refresh";
 
 const FloristDashboard = () => {
   const navigate = useNavigate();
@@ -47,7 +61,6 @@ const FloristDashboard = () => {
     image_url: "",
   });
   const [uploadingShopImg, setUploadingShopImg] = useState(false);
-  // States for product creation dialog
   const [createProductOpen, setCreateProductOpen] = useState(false);
   const [productForm, setProductForm] = useState({
     name: "",
@@ -70,7 +83,6 @@ const FloristDashboard = () => {
       setLoading(true);
       const [shopRes, productsRes, ordersRes] = await Promise.all([
         api.get("/shops/my-shop"),
-        // Use dedicated endpoint for florist/admin products
         api.get("/products/mine", { params: { limit: 50 } }),
         api.get("/orders/shop", { params: { limit: 50 } }),
       ]);
@@ -79,7 +91,6 @@ const FloristDashboard = () => {
       setOrders(ordersRes.data.orders || []);
     } catch (error) {
       console.error("Error fetching florist data:", error);
-      // Clear stale data if fetch fails
       setProducts([]);
       setOrders([]);
     } finally {
@@ -125,32 +136,16 @@ const FloristDashboard = () => {
   const handleShopImageFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const key = process.env.REACT_APP_IMGBB_KEY;
-    if (!key) {
-      window.alert("Thiếu REACT_APP_IMGBB_KEY trong frontend .env");
-      return;
-    }
+
     setUploadingShopImg(true);
     try {
-      const formData = new FormData();
-      formData.append("image", file);
-      const res = await fetch(`https://api.imgbb.com/1/upload?key=${key}`, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      const url = data?.data?.url;
-      if (url) {
-        setEditForm((prev) => ({ ...prev, image_url: url }));
-      } else {
-        throw new Error("Upload thất bại");
-      }
+      const url = await uploadImageToFreeImage(file);
+      setEditForm((prev) => ({ ...prev, image_url: url }));
     } catch (err) {
       console.error("Upload ảnh cửa hàng lỗi:", err);
       window.alert("Không thể tải ảnh lên. Vui lòng thử lại.");
     } finally {
       setUploadingShopImg(false);
-      // reset file input value to allow re-selecting same file
       e.target.value = "";
     }
   };
@@ -163,7 +158,6 @@ const FloristDashboard = () => {
       }
       const payload = { ...editForm };
       await api.put("/shops/my-shop", payload);
-      // Refresh and close
       await refreshShopStats();
       setEditOpen(false);
     } catch (e) {
@@ -180,10 +174,6 @@ const FloristDashboard = () => {
       console.error("Không thể tải sản phẩm:", e);
       setProducts([]);
     }
-  };
-
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
   };
 
   const handleOpenOrderDialog = (order) => {
@@ -272,22 +262,7 @@ const FloristDashboard = () => {
       }
       let uploadedUrl = null;
       if (imageFile) {
-        const imgbbKey = process.env.REACT_APP_IMGBB_KEY;
-        if (!imgbbKey) {
-          throw new Error("Thiếu REACT_APP_IMGBB_KEY trong env");
-        }
-        const formData = new FormData();
-        formData.append("key", imgbbKey);
-        formData.append("image", imageFile);
-        const res = await fetch("https://api.imgbb.com/1/upload", {
-          method: "POST",
-          body: formData,
-        });
-        const data = await res.json();
-        if (!data || !data.success) {
-          throw new Error("Tải ảnh lên thất bại");
-        }
-        uploadedUrl = data.data?.url || data.data?.display_url;
+        uploadedUrl = await uploadImageToFreeImage(imageFile);
       }
 
       const payload = {
@@ -302,7 +277,7 @@ const FloristDashboard = () => {
       await api.post("/products", payload);
       setCreateProductOpen(false);
       resetProductForm();
-      await reloadProducts(); // Refresh the product list
+      await reloadProducts();
     } catch (e) {
       setError(
         e.response?.data?.message || e.message || "Không thể tạo sản phẩm"
@@ -312,231 +287,465 @@ const FloristDashboard = () => {
     }
   };
 
-  if (loading) return <Typography>Loading...</Typography>;
-
-  return (
-    <Box sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Dashboard Cửa Hàng
-      </Typography>
-
-      {shop && (
-        <Paper sx={{ p: 3, mb: 4 }}>
-          <Typography variant="h6">Thông Tin Cửa Hàng</Typography>
-          <Box
-            sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1, mb: 2 }}
-          >
-            <Avatar
-              src={shop.image_url || undefined}
-              alt={shop.name || "Shop"}
-              sx={{ width: 72, height: 72 }}
-            >
-              {(shop?.name || "?").charAt(0).toUpperCase()}
-            </Avatar>
-          </Box>
-          <Typography>Tên: {shop.name}</Typography>
-          <Typography>
-            Doanh Thu:{" "}
-            {parseFloat(shop.total_revenue || 0).toLocaleString("vi-VN", {
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 2,
-            })}{" "}
-            VNĐ
-          </Typography>
-          <Typography>Đơn Hàng Hoàn Thành: {shop.completed_orders}</Typography>
-          <Typography>
-            Đánh Giá: {shop.average_rating}/5 ({shop.total_reviews} reviews)
-          </Typography>
-          {!!shop.email && <Typography>Email: {shop.email}</Typography>}
-          {!!shop.phone && <Typography>Số điện thoại: {shop.phone}</Typography>}
-          {!!shop.address && <Typography>Địa chỉ: {shop.address}</Typography>}
-          <Box sx={{ mt: 2 }}>
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={async () => {
-                try {
-                  await api.post("/shops/my-shop/recalc");
-                  await refreshShopStats();
-                } catch (e) {
-                  console.error("Recalc failed:", e);
-                  window.alert("Không thể đồng bộ số liệu. Hãy thử lại.");
-                }
-              }}
-            >
-              Đồng bộ số liệu
-            </Button>
-            <Button
-              size="small"
-              sx={{ ml: 1 }}
-              variant="text"
-              onClick={refreshShopStats}
-            >
-              Làm mới
-            </Button>
-            <Button
-              size="small"
-              sx={{ ml: 1 }}
-              variant="outlined"
-              onClick={openEditShop}
-            >
-              Chỉnh sửa thông tin
-            </Button>
-          </Box>
-        </Paper>
-      )}
-
+  if (loading) {
+    return (
       <Box
         sx={{
-          mb: 4,
           display: "flex",
+          justifyContent: "center",
           alignItems: "center",
-          justifyContent: "flex-start",
+          minHeight: "60vh",
         }}
       >
-        <Tabs value={tabValue} onChange={handleTabChange}>
-          <Tab label="Sản Phẩm" />
-          <Tab label="Đơn Hàng" />
-        </Tabs>
-        <Button
-          size="small"
-          variant="contained"
-          sx={{ ml: 2 }}
-          onClick={() => navigate("/wallet/balance")}
-        >
-          Ví của tôi
-        </Button>
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ minHeight: "100vh", bgcolor: "grey.50", pb: 6 }}>
+      {/* Hero Header */}
+      <Box
+        sx={{
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          color: "white",
+          py: 6,
+          mb: 4,
+        }}
+      >
+        <Container maxWidth="lg">
+          <Fade in timeout={800}>
+            <Box>
+              <Typography variant="h3" fontWeight={800} gutterBottom>
+                <StorefrontIcon
+                  sx={{ fontSize: 40, mr: 2, verticalAlign: "middle" }}
+                />
+                Dashboard Cửa Hàng
+              </Typography>
+              <Typography variant="h6" sx={{ opacity: 0.9 }}>
+                Quản lý shop, sản phẩm và đơn hàng của bạn
+              </Typography>
+            </Box>
+          </Fade>
+        </Container>
       </Box>
 
-      {tabValue === 0 && (
-        <TableContainer component={Paper}>
-          <Box sx={{ display: "flex", justifyContent: "flex-end", p: 2 }}>
-            <Button 
-              size="small" 
-              variant="contained" 
-              sx={{ mr: 1 }}
-              onClick={() => {
-                fetchCategories();
-                setCreateProductOpen(true);
+      <Container maxWidth="lg">
+        {/* Shop Stats Cards */}
+        {shop && (
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            {/* Shop Info Card */}
+            <Grid item xs={12} md={4}>
+              <Card
+                elevation={2}
+                sx={{
+                  height: "100%",
+                  background:
+                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  color: "white",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: -50,
+                    right: -50,
+                    width: 150,
+                    height: 150,
+                    borderRadius: "50%",
+                    background: "rgba(255,255,255,0.1)",
+                  }}
+                />
+                <CardContent sx={{ position: "relative", zIndex: 1 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                    <Avatar
+                      src={shop.image_url || undefined}
+                      alt={shop.name}
+                      sx={{
+                        width: 80,
+                        height: 80,
+                        mr: 2,
+                        border: "3px solid white",
+                      }}
+                    >
+                      {(shop?.name || "?").charAt(0).toUpperCase()}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="h5" fontWeight={700}>
+                        {shop.name}
+                      </Typography>
+                      <Chip
+                        label={
+                          shop.status === "approved" ? "Đã duyệt" : shop.status
+                        }
+                        size="small"
+                        sx={{
+                          bgcolor: "rgba(255,255,255,0.3)",
+                          color: "white",
+                          mt: 0.5,
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                  <Divider sx={{ bgcolor: "rgba(255,255,255,0.2)", my: 2 }} />
+                  <Stack spacing={1}>
+                    {shop.phone && (
+                      <Typography variant="body2">📞 {shop.phone}</Typography>
+                    )}
+                    {shop.email && (
+                      <Typography variant="body2">📧 {shop.email}</Typography>
+                    )}
+                    {shop.address && (
+                      <Typography variant="body2">📍 {shop.address}</Typography>
+                    )}
+                  </Stack>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    onClick={() => openEditShop()}
+                    startIcon={<EditIcon />}
+                    sx={{
+                      mt: 2,
+                      bgcolor: "white",
+                      color: "primary.main",
+                      "&:hover": { bgcolor: "grey.100" },
+                    }}
+                  >
+                    Chỉnh sửa Shop
+                  </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Revenue Card */}
+            <Grid item xs={12} sm={6} md={4}>
+              <Card
+                elevation={2}
+                sx={{
+                  height: "100%",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: -20,
+                    right: -20,
+                    width: 100,
+                    height: 100,
+                    borderRadius: "50%",
+                    background:
+                      "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+                    opacity: 0.1,
+                  }}
+                />
+                <CardContent sx={{ position: "relative" }}>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                    <Avatar sx={{ bgcolor: "success.main", mr: 2 }}>
+                      <AttachMoneyIcon />
+                    </Avatar>
+                    <Typography variant="h6" fontWeight={600}>
+                      Doanh Thu
+                    </Typography>
+                  </Box>
+                  <Typography
+                    variant="h4"
+                    fontWeight={800}
+                    color="success.main"
+                  >
+                    {parseFloat(shop.total_revenue || 0).toLocaleString(
+                      "vi-VN"
+                    )}{" "}
+                    ₫
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 1 }}
+                  >
+                    Tổng doanh thu từ {shop.total_orders || 0} đơn hàng
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Orders Card */}
+            <Grid item xs={12} sm={6} md={4}>
+              <Card
+                elevation={2}
+                sx={{
+                  height: "100%",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: -20,
+                    right: -20,
+                    width: 100,
+                    height: 100,
+                    borderRadius: "50%",
+                    background:
+                      "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+                    opacity: 0.1,
+                  }}
+                />
+                <CardContent sx={{ position: "relative" }}>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                    <Avatar sx={{ bgcolor: "primary.main", mr: 2 }}>
+                      <ShoppingCartIcon />
+                    </Avatar>
+                    <Typography variant="h6" fontWeight={600}>
+                      Đơn Hàng
+                    </Typography>
+                  </Box>
+                  <Typography
+                    variant="h4"
+                    fontWeight={800}
+                    color="primary.main"
+                  >
+                    {shop.completed_orders || 0}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 1 }}
+                  >
+                    Đơn hoàn thành / {shop.total_orders || 0} tổng đơn
+                  </Typography>
+                  <Chip
+                    label={`Đánh giá: ${shop.average_rating || 0}/5 ⭐`}
+                    size="small"
+                    color="warning"
+                    sx={{ mt: 1 }}
+                  />
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        )}
+
+        {/* Tabs Section */}
+        <Paper elevation={2} sx={{ mb: 3 }}>
+          <Tabs
+            value={tabValue}
+            onChange={(e, v) => setTabValue(v)}
+            variant="fullWidth"
+            sx={{
+              borderBottom: 1,
+              borderColor: "divider",
+              "& .MuiTab-root": { fontWeight: 600, fontSize: "1rem" },
+            }}
+          >
+            <Tab
+              icon={<InventoryIcon />}
+              iconPosition="start"
+              label={`Sản Phẩm (${products.length})`}
+            />
+            <Tab
+              icon={<ShoppingCartIcon />}
+              iconPosition="start"
+              label={`Đơn Hàng (${orders.length})`}
+            />
+          </Tabs>
+        </Paper>
+
+        {/* Tab Content */}
+        {tabValue === 0 && (
+          <Paper elevation={2}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                p: 2,
+                borderBottom: 1,
+                borderColor: "divider",
               }}
             >
-              Tạo sản phẩm
-            </Button>
-            <Button size="small" variant="outlined" onClick={reloadProducts}>
-              Tải lại
-            </Button>
-          </Box>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Tên</TableCell>
-                <TableCell>Giá</TableCell>
-                <TableCell>Tồn Kho</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {products.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} align="center">
-                    Chưa có sản phẩm nào.
-                  </TableCell>
-                </TableRow>
-              )}
-              {products.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>{product.id}</TableCell>
-                  <TableCell>{product.name}</TableCell>
-                  <TableCell>
-                    {parseFloat(product.price).toLocaleString("vi-VN", {
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 2,
-                    })}{" "}
-                    VNĐ
-                  </TableCell>
-                  <TableCell>{product.stock}</TableCell>
-                  <TableCell>{product.status}</TableCell>
-                  <TableCell>
-                    <Button
-                      size="small"
-                      onClick={() => {
-                        /* Edit product */
-                      }}
-                    >
-                      Sửa
-                    </Button>
-                    <Button
-                      size="small"
-                      color="error"
-                      onClick={() => {
-                        /* Delete */
-                      }}
-                    >
-                      Xóa
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+              <Typography variant="h6" fontWeight={600}>
+                Danh Sách Sản Phẩm
+              </Typography>
+              <Box>
+                <Button
+                  variant="outlined"
+                  startIcon={<RefreshIcon />}
+                  onClick={reloadProducts}
+                  sx={{ mr: 1 }}
+                >
+                  Tải lại
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    fetchCategories();
+                    setCreateProductOpen(true);
+                  }}
+                >
+                  Tạo sản phẩm
+                </Button>
+              </Box>
+            </Box>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>ID</TableCell>
+                    <TableCell>Tên</TableCell>
+                    <TableCell align="right">Giá</TableCell>
+                    <TableCell align="right">Tồn Kho</TableCell>
+                    <TableCell>Trạng thái</TableCell>
+                    <TableCell align="center">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {products.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                        <Typography color="text.secondary">
+                          Chưa có sản phẩm nào.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {products.map((product) => (
+                    <TableRow key={product.id} hover>
+                      <TableCell>{product.id}</TableCell>
+                      <TableCell>{product.name}</TableCell>
+                      <TableCell align="right">
+                        {parseFloat(product.price).toLocaleString("vi-VN")} ₫
+                      </TableCell>
+                      <TableCell align="right">{product.stock}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={product.status}
+                          size="small"
+                          color={
+                            product.status === "approved"
+                              ? "success"
+                              : "default"
+                          }
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => navigate(`/florist/products`)}
+                        >
+                          Quản lý
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        )}
 
-      {tabValue === 1 && (
-        <TableContainer component={Paper}>
-          <Box sx={{ display: "flex", justifyContent: "flex-end", p: 2 }}>
-            <Button size="small" variant="outlined" onClick={reloadOrders}>
-              Tải lại
-            </Button>
-          </Box>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Khách Hàng</TableCell>
-                <TableCell>Tổng Tiền</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {orders.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} align="center">
-                    Chưa có đơn hàng nào.
-                  </TableCell>
-                </TableRow>
-              )}
-              {orders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell>{order.id}</TableCell>
-                  <TableCell>{order.customer?.name}</TableCell>
-                  <TableCell>
-                    {parseFloat(order.total_amount).toLocaleString("vi-VN", {
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 2,
-                    })}{" "}
-                    VNĐ
-                  </TableCell>
-                  <TableCell>{order.status}</TableCell>
-                  <TableCell>
-                    <Button
-                      size="small"
-                      onClick={() => handleOpenOrderDialog(order)}
-                    >
-                      Xử Lý
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+        {tabValue === 1 && (
+          <Paper elevation={2}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                p: 2,
+                borderBottom: 1,
+                borderColor: "divider",
+              }}
+            >
+              <Typography variant="h6" fontWeight={600}>
+                Danh Sách Đơn Hàng
+              </Typography>
+              <Button
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={reloadOrders}
+              >
+                Tải lại
+              </Button>
+            </Box>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>ID</TableCell>
+                    <TableCell>Khách Hàng</TableCell>
+                    <TableCell align="right">Tổng Tiền</TableCell>
+                    <TableCell>Trạng thái</TableCell>
+                    <TableCell align="center">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {orders.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                        <Typography color="text.secondary">
+                          Chưa có đơn hàng nào.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {orders.map((order) => (
+                    <TableRow key={order.id} hover>
+                      <TableCell>{order.id}</TableCell>
+                      <TableCell>{order.customer?.name}</TableCell>
+                      <TableCell align="right">
+                        {parseFloat(order.total_amount).toLocaleString("vi-VN")}{" "}
+                        ₫
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={order.status}
+                          size="small"
+                          color={
+                            order.status === "completed"
+                              ? "success"
+                              : order.status === "cancelled"
+                              ? "error"
+                              : "default"
+                          }
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => handleOpenOrderDialog(order)}
+                        >
+                          Xử Lý
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        )}
 
-      {/* Order processing dialog */}
+        {/* Quick Actions */}
+        <Box sx={{ mt: 4, textAlign: "center" }}>
+          <Button
+            variant="contained"
+            size="large"
+            onClick={() => navigate("/wallet/balance")}
+            sx={{ minWidth: 200 }}
+          >
+            Quản lý Ví
+          </Button>
+        </Box>
+      </Container>
+
+      {/* Order Dialog */}
       <Dialog
         open={orderDialogOpen}
         onClose={handleCloseOrderDialog}
@@ -547,14 +756,14 @@ const FloristDashboard = () => {
         <DialogContent dividers>
           <Box sx={{ mb: 2 }}>
             <Typography>
-              Người mua: <strong>{selectedOrder?.customer?.name || ""}</strong>
+              <strong>Người mua:</strong> {selectedOrder?.customer?.name || ""}
             </Typography>
             <Typography>
-              SĐT: <strong>{selectedOrder?.customer?.phone || ""}</strong>
+              <strong>SĐT:</strong> {selectedOrder?.customer?.phone || ""}
             </Typography>
             <Typography>
-              Địa chỉ giao hàng:{" "}
-              <strong>{selectedOrder?.shipping_address || ""}</strong>
+              <strong>Địa chỉ giao hàng:</strong>{" "}
+              {selectedOrder?.shipping_address || ""}
             </Typography>
           </Box>
           <Divider sx={{ mb: 2 }} />
@@ -589,7 +798,7 @@ const FloristDashboard = () => {
                     {parseFloat(
                       selectedOrder?.total_amount || 0
                     ).toLocaleString("vi-VN")}{" "}
-                    VNĐ
+                    ₫
                   </strong>
                 </TableCell>
               </TableRow>
@@ -617,7 +826,7 @@ const FloristDashboard = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Edit shop dialog */}
+      {/* Edit Shop Dialog */}
       <Dialog
         open={editOpen}
         onClose={() => setEditOpen(false)}
@@ -626,7 +835,7 @@ const FloristDashboard = () => {
       >
         <DialogTitle>Chỉnh sửa thông tin cửa hàng</DialogTitle>
         <DialogContent dividers>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+          <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
               label="Tên cửa hàng"
               value={editForm.name}
@@ -675,12 +884,10 @@ const FloristDashboard = () => {
               ) : null}
             </Box>
             {editForm.image_url && (
-              <Box
-                sx={{ mt: 1, display: "flex", alignItems: "center", gap: 2 }}
-              >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Avatar
                   src={editForm.image_url}
-                  alt="Shop avatar preview"
+                  alt="Shop avatar"
                   sx={{ width: 56, height: 56 }}
                 />
                 <Typography
@@ -692,7 +899,7 @@ const FloristDashboard = () => {
                 </Typography>
               </Box>
             )}
-          </Box>
+          </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditOpen(false)}>Hủy</Button>
@@ -702,7 +909,7 @@ const FloristDashboard = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Create product dialog */}
+      {/* Create Product Dialog */}
       <Dialog
         open={createProductOpen}
         onClose={() => {
@@ -719,7 +926,9 @@ const FloristDashboard = () => {
             <TextField
               label="Tên sản phẩm"
               value={productForm.name}
-              onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+              onChange={(e) =>
+                setProductForm({ ...productForm, name: e.target.value })
+              }
               required
             />
             <TextField
@@ -753,7 +962,9 @@ const FloristDashboard = () => {
               label="Tồn kho"
               type="number"
               value={productForm.stock}
-              onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
+              onChange={(e) =>
+                setProductForm({ ...productForm, stock: e.target.value })
+              }
               required
             />
             <TextField
@@ -793,7 +1004,11 @@ const FloristDashboard = () => {
           >
             Hủy
           </Button>
-          <Button variant="contained" onClick={handleCreateProduct} disabled={saving}>
+          <Button
+            variant="contained"
+            onClick={handleCreateProduct}
+            disabled={saving}
+          >
             {saving ? "Đang lưu..." : "Tạo"}
           </Button>
         </DialogActions>
