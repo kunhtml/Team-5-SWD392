@@ -322,18 +322,44 @@ const FloristProducts = () => {
               inputMode="numeric"
               value={form.price}
               onChange={(e) => {
-                const v = e.target.value.replace(/\D/g, "");
-                setForm({ ...form, price: v });
+                let v = e.target.value.replace(/\D/g, ""); // Remove non-digits
+
+                // Remove leading zeros
+                if (v.length > 0) {
+                  v = v.replace(/^0+/, "");
+                }
+
+                // If empty after removing zeros, keep empty
+                if (v === "") {
+                  setForm({ ...form, price: "" });
+                } else {
+                  setForm({ ...form, price: v });
+                }
               }}
               required
-              helperText="Chỉ nhập số, > 0"
+              helperText="Chỉ nhập số nguyên dương, không bắt đầu bằng 0"
+              error={
+                form.price !== "" &&
+                (form.price === "0" || parseInt(form.price) <= 0)
+              }
             />
             <TextField
               label="Tồn kho"
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={form.stock}
-              onChange={(e) => setForm({ ...form, stock: e.target.value })}
+              onChange={(e) => {
+                let v = e.target.value.replace(/\D/g, ""); // Remove non-digits
+
+                // Remove leading zeros (but allow single "0")
+                if (v.length > 1) {
+                  v = v.replace(/^0+/, "");
+                }
+
+                setForm({ ...form, stock: v });
+              }}
               required
+              helperText="Nhập số lượng tồn kho (≥ 0)"
             />
             <TextField
               label="Mô tả"
@@ -417,20 +443,44 @@ const FloristProducts = () => {
               inputMode="numeric"
               value={editForm.price}
               onChange={(e) => {
-                const v = e.target.value.replace(/\D/g, "");
-                setEditForm({ ...editForm, price: v });
+                let v = e.target.value.replace(/\D/g, ""); // Remove non-digits
+
+                // Remove leading zeros
+                if (v.length > 0) {
+                  v = v.replace(/^0+/, "");
+                }
+
+                // If empty after removing zeros, keep empty
+                if (v === "") {
+                  setEditForm({ ...editForm, price: "" });
+                } else {
+                  setEditForm({ ...editForm, price: v });
+                }
               }}
               required
-              helperText="Chỉ nhập số, > 0"
+              helperText="Chỉ nhập số nguyên dương, không bắt đầu bằng 0"
+              error={
+                editForm.price !== "" &&
+                (editForm.price === "0" || parseInt(editForm.price) <= 0)
+              }
             />
             <TextField
               label="Tồn kho"
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={editForm.stock}
-              onChange={(e) =>
-                setEditForm({ ...editForm, stock: e.target.value })
-              }
+              onChange={(e) => {
+                let v = e.target.value.replace(/\D/g, ""); // Remove non-digits
+
+                // Remove leading zeros (but allow single "0")
+                if (v.length > 1) {
+                  v = v.replace(/^0+/, "");
+                }
+
+                setEditForm({ ...editForm, stock: v });
+              }}
               required
+              helperText="Nhập số lượng tồn kho (≥ 0)"
             />
             <TextField
               label="Mô tả"

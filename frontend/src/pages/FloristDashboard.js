@@ -32,6 +32,21 @@ import {
   Fade,
   Container,
 } from "@mui/material";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 import InventoryIcon from "@mui/icons-material/Inventory";
@@ -40,6 +55,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 
 const FloristDashboard = () => {
   const navigate = useNavigate();
@@ -73,6 +89,20 @@ const FloristDashboard = () => {
   const [imageFile, setImageFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [chartData, setChartData] = useState({
+    revenue: [],
+    orders: [],
+    categories: [],
+  });
+
+  const COLORS = [
+    "#667eea",
+    "#764ba2",
+    "#f093fb",
+    "#f5576c",
+    "#4facfe",
+    "#00f2fe",
+  ];
 
   useEffect(() => {
     fetchFloristData();
@@ -88,7 +118,11 @@ const FloristDashboard = () => {
       ]);
       setShop(shopRes.data.shop);
       setProducts(productsRes.data.products || []);
-      setOrders(ordersRes.data.orders || []);
+      const ordersData = ordersRes.data.orders || [];
+      setOrders(ordersData);
+
+      // Generate chart data
+      generateChartData(ordersData, productsRes.data.products || []);
     } catch (error) {
       console.error("Error fetching florist data:", error);
       setProducts([]);
@@ -96,6 +130,56 @@ const FloristDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const generateChartData = (ordersData, productsData) => {
+    // Revenue by month (last 6 months)
+    const monthlyRevenue = {};
+    const monthlyOrders = {};
+    const now = new Date();
+
+    // Initialize last 6 months
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getMonth() + 1}/${d.getFullYear()}`;
+      monthlyRevenue[key] = 0;
+      monthlyOrders[key] = 0;
+    }
+
+    // Fill in data from completed orders
+    ordersData
+      .filter((order) => order.status === "completed")
+      .forEach((order) => {
+        const date = new Date(order.createdAt || order.created_at);
+        const key = `${date.getMonth() + 1}/${date.getFullYear()}`;
+        if (monthlyRevenue.hasOwnProperty(key)) {
+          monthlyRevenue[key] += parseFloat(order.total_amount || 0);
+          monthlyOrders[key] += 1;
+        }
+      });
+
+    const revenueData = Object.keys(monthlyRevenue).map((key) => ({
+      month: key,
+      revenue: Math.round(monthlyRevenue[key]),
+      orders: monthlyOrders[key],
+    }));
+
+    // Product categories distribution
+    const categoryCount = {};
+    productsData.forEach((product) => {
+      const catName = product.category?.name || "Khác";
+      categoryCount[catName] = (categoryCount[catName] || 0) + 1;
+    });
+
+    const categoryData = Object.keys(categoryCount).map((name) => ({
+      name,
+      value: categoryCount[name],
+    }));
+
+    setChartData({
+      revenue: revenueData,
+      categories: categoryData,
+    });
   };
 
   const fetchCategories = async () => {
@@ -256,20 +340,44 @@ const FloristDashboard = () => {
     setSaving(true);
     setError("");
     try {
+      // Validate price
       const priceNum = parseInt(productForm.price, 10);
-      if (!Number.isFinite(priceNum) || priceNum <= 0) {
-        throw new Error("Giá phải là số nguyên dương");
+      if (!productForm.price || productForm.price.trim() === "") {
+        throw new Error("Vui lòng nhập giá sản phẩm");
       }
+      if (!Number.isFinite(priceNum) || priceNum <= 0) {
+        throw new Error("Giá phải là số nguyên dương (lớn hơn 0)");
+      }
+
+      // Validate stock
+      const stockNum = parseInt(productForm.stock, 10);
+      if (!productForm.stock || productForm.stock.trim() === "") {
+        throw new Error("Vui lòng nhập số lượng tồn kho");
+      }
+      if (!Number.isFinite(stockNum) || stockNum < 0) {
+        throw new Error("Tồn kho phải là số nguyên không âm (≥ 0)");
+      }
+
+      // Validate name
+      if (!productForm.name || productForm.name.trim() === "") {
+        throw new Error("Vui lòng nhập tên sản phẩm");
+      }
+
+      // Validate category
+      if (!productForm.category_id) {
+        throw new Error("Vui lòng chọn danh mục");
+      }
+
       let uploadedUrl = null;
       if (imageFile) {
         uploadedUrl = await uploadImageToFreeImage(imageFile);
       }
 
       const payload = {
-        name: productForm.name,
+        name: productForm.name.trim(),
         price: priceNum,
-        stock: parseInt(productForm.stock, 10),
-        description: productForm.description,
+        stock: stockNum,
+        description: productForm.description.trim(),
         category_id: parseInt(productForm.category_id, 10),
       };
       if (uploadedUrl) payload.image_url = uploadedUrl;
@@ -529,6 +637,105 @@ const FloristDashboard = () => {
             </Grid>
           </Grid>
         )}
+
+        {/* Charts Section */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          {/* Revenue Chart */}
+          <Grid item xs={12} lg={8}>
+            <Card elevation={2}>
+              <CardContent>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                  <TrendingUpIcon sx={{ mr: 1, color: "primary.main" }} />
+                  <Typography variant="h6" fontWeight={600}>
+                    Doanh Thu & Đơn Hàng Theo Tháng
+                  </Typography>
+                </Box>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={chartData.revenue}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis yAxisId="left" orientation="left" stroke="#667eea" />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      stroke="#f5576c"
+                    />
+                    <Tooltip
+                      formatter={(value, name) => {
+                        if (name === "revenue") {
+                          return [
+                            value.toLocaleString("vi-VN") + " ₫",
+                            "Doanh thu",
+                          ];
+                        }
+                        return [value, "Đơn hàng"];
+                      }}
+                    />
+                    <Legend />
+                    <Bar
+                      yAxisId="left"
+                      dataKey="revenue"
+                      fill="#667eea"
+                      name="Doanh thu (₫)"
+                    />
+                    <Bar
+                      yAxisId="right"
+                      dataKey="orders"
+                      fill="#f5576c"
+                      name="Đơn hàng"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Category Distribution Chart */}
+          <Grid item xs={12} lg={4}>
+            <Card elevation={2}>
+              <CardContent>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                  <InventoryIcon sx={{ mr: 1, color: "success.main" }} />
+                  <Typography variant="h6" fontWeight={600}>
+                    Phân Bố Sản Phẩm
+                  </Typography>
+                </Box>
+                {chartData.categories.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={chartData.categories}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) =>
+                          `${name}: ${(percent * 100).toFixed(0)}%`
+                        }
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {chartData.categories.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={COLORS[index % COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <Box sx={{ textAlign: "center", py: 8 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Chưa có sản phẩm
+                    </Typography>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
 
         {/* Tabs Section */}
         <Paper elevation={2} sx={{ mb: 3 }}>
@@ -952,20 +1159,44 @@ const FloristDashboard = () => {
               inputMode="numeric"
               value={productForm.price}
               onChange={(e) => {
-                const v = e.target.value.replace(/\D/g, "");
-                setProductForm({ ...productForm, price: v });
+                let v = e.target.value.replace(/\D/g, ""); // Remove non-digits
+
+                // Remove leading zeros
+                if (v.length > 0) {
+                  v = v.replace(/^0+/, "");
+                }
+
+                // If empty after removing zeros, keep empty
+                if (v === "") {
+                  setProductForm({ ...productForm, price: "" });
+                } else {
+                  setProductForm({ ...productForm, price: v });
+                }
               }}
               required
-              helperText="Chỉ nhập số, > 0"
+              helperText="Chỉ nhập số nguyên dương, không bắt đầu bằng 0"
+              error={
+                productForm.price !== "" &&
+                (productForm.price === "0" || parseInt(productForm.price) <= 0)
+              }
             />
             <TextField
               label="Tồn kho"
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={productForm.stock}
-              onChange={(e) =>
-                setProductForm({ ...productForm, stock: e.target.value })
-              }
+              onChange={(e) => {
+                let v = e.target.value.replace(/\D/g, ""); // Remove non-digits
+
+                // Remove leading zeros (but allow single "0")
+                if (v.length > 1) {
+                  v = v.replace(/^0+/, "");
+                }
+
+                setProductForm({ ...productForm, stock: v });
+              }}
               required
+              helperText="Nhập số lượng tồn kho (≥ 0)"
             />
             <TextField
               label="Mô tả"

@@ -22,6 +22,12 @@ import {
   TextField,
   Alert,
   Snackbar,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Pagination,
+  Stack,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
@@ -40,26 +46,60 @@ const AdminDashboard = () => {
     message: "",
     severity: "success",
   });
+
+  // Pagination & Filter states
+  const [userPage, setUserPage] = useState(1);
+  const [userTotalPages, setUserTotalPages] = useState(1);
+  const [userRoleFilter, setUserRoleFilter] = useState("all");
+
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchAdminData();
   }, []);
 
+  useEffect(() => {
+    fetchUsers();
+  }, [userPage, userRoleFilter]);
+
+  const fetchUsers = async () => {
+    try {
+      const params = {
+        page: userPage,
+        limit: 10,
+      };
+      if (userRoleFilter !== "all") {
+        params.role = userRoleFilter;
+      }
+
+      const response = await api.get("/users", { params });
+      const usersList = response.data.users || [];
+
+      // Sort by ID ascending (smallest first)
+      usersList.sort((a, b) => a.id - b.id);
+
+      setUsers(usersList);
+      setUserTotalPages(response.data.pages || 1);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      setUsers([]);
+    }
+  };
+
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      const [usersRes, shopsRes, requestsRes, withdrawalRes] =
-        await Promise.all([
-          api.get("/users"),
-          api.get("/shops"),
-          api.get("/shops/request"), // Assume endpoint for pending requests
-          api.get("/wallet/withdrawals"), // Get all withdrawal requests for admin
-        ]);
-      setUsers(usersRes.data.users || []);
+      const [shopsRes, requestsRes, withdrawalRes] = await Promise.all([
+        api.get("/shops"),
+        api.get("/shops/request"), // Assume endpoint for pending requests
+        api.get("/wallet/withdrawals"), // Get all withdrawal requests for admin
+      ]);
       setShops(shopsRes.data.shops || []);
       setRequests(requestsRes.data.requests || []);
       setWithdrawalRequests(withdrawalRes.data.requests || []);
+
+      // Fetch users separately with pagination
+      await fetchUsers();
     } catch (error) {
       console.error("Error fetching admin data:", error);
     } finally {
@@ -152,10 +192,17 @@ const AdminDashboard = () => {
         Admin Dashboard
       </Typography>
       <Box sx={{ mb: 2 }}>
-        <Button variant="contained" onClick={() => navigate("/admin/posts")} sx={{ mr: 2 }}>
+        <Button
+          variant="contained"
+          onClick={() => navigate("/admin/posts")}
+          sx={{ mr: 2 }}
+        >
           Quản lý bài đăng
         </Button>
-        <Button variant="contained" onClick={() => navigate("/admin/special-orders")}>
+        <Button
+          variant="contained"
+          onClick={() => navigate("/admin/special-orders")}
+        >
           Quản lý đơn đặc biệt
         </Button>
       </Box>
@@ -168,47 +215,104 @@ const AdminDashboard = () => {
       </Tabs>
 
       {tabValue === 0 && (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Tên</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Role</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>{user.id}</TableCell>
-                  <TableCell>{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                    <Chip label={user.role} color="primary" size="small" />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={user.status}
-                      color={user.status === "active" ? "success" : "error"}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      size="small"
-                      onClick={() => navigate(`/admin/users/${user.id}`)}
-                    >
-                      Edit
-                    </Button>
-                  </TableCell>
+        <Box>
+          {/* Filter Controls */}
+          <Box sx={{ mb: 2, display: "flex", gap: 2, alignItems: "center" }}>
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel>Lọc theo Role</InputLabel>
+              <Select
+                value={userRoleFilter}
+                label="Lọc theo Role"
+                onChange={(e) => {
+                  setUserRoleFilter(e.target.value);
+                  setUserPage(1); // Reset to page 1 when filter changes
+                }}
+              >
+                <MenuItem value="all">Tất cả</MenuItem>
+                <MenuItem value="admin">Admin</MenuItem>
+                <MenuItem value="florist">Florist</MenuItem>
+                <MenuItem value="customer">Customer</MenuItem>
+              </Select>
+            </FormControl>
+            <Typography variant="body2" color="text.secondary">
+              Tổng: {users.length} người dùng
+            </Typography>
+          </Box>
+
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>ID</TableCell>
+                  <TableCell>Tên</TableCell>
+                  <TableCell>Email</TableCell>
+                  <TableCell>Phone</TableCell>
+                  <TableCell>Role</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Actions</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">
+                      Không có người dùng nào
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>{user.id}</TableCell>
+                      <TableCell>{user.name}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{user.phone || "-"}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={user.role}
+                          color={
+                            user.role === "admin"
+                              ? "error"
+                              : user.role === "florist"
+                              ? "warning"
+                              : "primary"
+                          }
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={user.status}
+                          color={user.status === "active" ? "success" : "error"}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="small"
+                          onClick={() => navigate(`/admin/users/${user.id}`)}
+                        >
+                          Edit
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* Pagination */}
+          <Stack spacing={2} alignItems="center" sx={{ mt: 3 }}>
+            <Pagination
+              count={userTotalPages}
+              page={userPage}
+              onChange={(e, page) => setUserPage(page)}
+              color="primary"
+              showFirstButton
+              showLastButton
+            />
+          </Stack>
+        </Box>
       )}
 
       {tabValue === 1 && (
