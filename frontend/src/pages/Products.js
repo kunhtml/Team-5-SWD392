@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import { 
-  Snackbar, 
+import {
+  Snackbar,
   Alert,
   Container,
   Chip,
@@ -30,9 +30,9 @@ import {
   InputAdornment,
   Paper,
 } from "@mui/material";
-import { 
-  Add, 
-  Remove, 
+import {
+  Add,
+  Remove,
   ShoppingCart,
   Search,
   FilterList,
@@ -63,7 +63,10 @@ const Products = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
   const cartItems = useSelector((state) => state.cart.items);
-  const totalCartItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const totalCartItems = cartItems.reduce(
+    (sum, item) => sum + item.quantity,
+    0
+  );
 
   useEffect(() => {
     fetchProducts();
@@ -110,9 +113,9 @@ const Products = () => {
   const isAdmin = user && user.role === "admin";
 
   const toggleFavorite = (productId) => {
-    setFavorites(prev => ({
+    setFavorites((prev) => ({
       ...prev,
-      [productId]: !prev[productId]
+      [productId]: !prev[productId],
     }));
   };
 
@@ -236,7 +239,7 @@ const Products = () => {
                 </Typography>
               </Box>
             </Box>
-            
+
             {/* Stats */}
             <Box sx={{ display: "flex", gap: 3, mt: 3 }}>
               <Chip
@@ -286,7 +289,7 @@ const Products = () => {
               Bộ Lọc Tìm Kiếm
             </Typography>
           </Box>
-          
+
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
               <TextField
@@ -310,7 +313,7 @@ const Products = () => {
                 }}
               />
             </Grid>
-            
+
             <Grid item xs={12} md={4}>
               <FormControl fullWidth>
                 <InputLabel>Danh Mục</InputLabel>
@@ -337,7 +340,7 @@ const Products = () => {
                 </Select>
               </FormControl>
             </Grid>
-            
+
             <Grid item xs={12} md={2}>
               <Button
                 fullWidth
@@ -346,11 +349,13 @@ const Products = () => {
                 sx={{
                   height: "56px",
                   borderRadius: 2,
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  background:
+                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                   fontWeight: "bold",
                   fontSize: "1rem",
                   "&:hover": {
-                    background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
+                    background:
+                      "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
                     transform: "translateY(-2px)",
                     boxShadow: "0 8px 16px rgba(102, 126, 234, 0.4)",
                   },
@@ -421,21 +426,22 @@ const Products = () => {
                     </IconButton>
 
                     {/* Stock Badge */}
-                    {(product?.stock || 0) <= 5 && (product?.stock || 0) > 0 && (
-                      <Chip
-                        label={`Chỉ còn ${product.stock}`}
-                        size="small"
-                        sx={{
-                          position: "absolute",
-                          top: 12,
-                          left: 12,
-                          zIndex: 2,
-                          bgcolor: "#ff9800",
-                          color: "white",
-                          fontWeight: "bold",
-                        }}
-                      />
-                    )}
+                    {(product?.stock || 0) <= 5 &&
+                      (product?.stock || 0) > 0 && (
+                        <Chip
+                          label={`Chỉ còn ${product.stock}`}
+                          size="small"
+                          sx={{
+                            position: "absolute",
+                            top: 12,
+                            left: 12,
+                            zIndex: 2,
+                            bgcolor: "#ff9800",
+                            color: "white",
+                            fontWeight: "bold",
+                          }}
+                        />
+                      )}
 
                     {(product?.stock || 0) === 0 && (
                       <Chip
@@ -595,7 +601,9 @@ const Products = () => {
                             sx={{
                               borderRadius: 0,
                               color: "#667eea",
-                              "&:hover": { bgcolor: "rgba(102, 126, 234, 0.1)" },
+                              "&:hover": {
+                                bgcolor: "rgba(102, 126, 234, 0.1)",
+                              },
                             }}
                           >
                             <Remove fontSize="small" />
@@ -621,7 +629,9 @@ const Products = () => {
                             sx={{
                               borderRadius: 0,
                               color: "#667eea",
-                              "&:hover": { bgcolor: "rgba(102, 126, 234, 0.1)" },
+                              "&:hover": {
+                                bgcolor: "rgba(102, 126, 234, 0.1)",
+                              },
                             }}
                           >
                             <Add fontSize="small" />
@@ -742,8 +752,7 @@ const Products = () => {
               justifyContent: "center",
               cursor: "pointer",
               boxShadow: "0 8px 24px rgba(102, 126, 234, 0.4)",
-              background:
-                "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
               color: "white",
               transition: "all 0.3s",
               zIndex: 1000,
