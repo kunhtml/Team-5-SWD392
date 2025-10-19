@@ -1,3 +1,20 @@
+HE181033
+Khuất Thị Mai Chi
+
+HE150075
+Phạm Xuân Hiếu
+
+HE163013
+Phạm Hải Hà
+
+HE180536
+Đặng Trung Hiếu
+
+HE170170
+Nguyễn Ngọc Diệp
+
+
+
 # FlowerShop 🌸
 
 FlowerShop là một nền tảng thương mại điện tử toàn diện giúp kết nối khách hàng, nhà bán hoa (florist) và quản trị viên trên cùng một hệ thống. Ứng dụng bao gồm backend Node.js/Express với MySQL, frontend React sử dụng Material UI, ví điện tử, đặt hàng, quản lý shop, chatbot hỗ trợ và màn hình chào mừng lazy-load tạo trải nghiệm hiện đại.
