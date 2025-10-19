@@ -109,22 +109,23 @@ const getTransactions = async (req, res) => {
 
     const wallet = await Wallet.findOne({ where: { user_id: req.user.id } });
     if (!wallet) {
-      return res.json({ transactions: [], total: 0 });
+      return res.json({ transactions: [], total: 0, page: 1, pages: 0 });
     }
 
     const where = { wallet_id: wallet.id };
     if (type) where.type = type;
     if (start_date || end_date) {
-      where.created_at = {};
-      if (start_date) where.created_at[Op.gte] = start_date;
-      if (end_date) where.created_at[Op.lte] = end_date;
+      where.createdAt = {};
+      if (start_date) where.createdAt[Op.gte] = start_date;
+      if (end_date) where.createdAt[Op.lte] = end_date;
     }
 
     const { count, rows } = await WalletTransaction.findAndCountAll({
       where,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [["createdAt", "DESC"]],
+      order: [["created_at", "DESC"]],
+      raw: true,
     });
 
     res.json({
@@ -134,8 +135,8 @@ const getTransactions = async (req, res) => {
       pages: Math.ceil(count / limit),
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error fetching transactions:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 

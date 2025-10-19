@@ -82,7 +82,7 @@ const Dashboard = () => {
 
       // Fetch wallet balance
       const walletRes = await api.get("/wallet/balance");
-      const balance = walletRes.data.wallet?.balance || 0;
+      const balance = Number(walletRes.data.balance || 0);
 
       setStats({
         orders: myOrders.length,

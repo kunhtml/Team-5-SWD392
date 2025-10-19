@@ -24,6 +24,36 @@ import {
   Chip,
   Pagination,
 } from "@mui/material";
+import {
+  History,
+  TrendingUp,
+  TrendingDown,
+  AccountBalanceWallet,
+  CheckCircle,
+  Error as ErrorIcon,
+  Warning as WarningIcon,
+} from "@mui/icons-material";
+import { keyframes } from "@mui/system";
+
+// Animation keyframes
+const bounce = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+`;
+
+const popIn = keyframes`
+  0% { 
+    transform: scale(0.5) translateY(-50px);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% { 
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+`;
 
 export default function WalletBalance() {
   const { user } = useSelector((state) => state.auth);
@@ -40,6 +70,12 @@ export default function WalletBalance() {
     message: "",
     severity: "success",
   });
+  const [successModal, setSuccessModal] = useState({
+    open: false,
+    message: "",
+    title: "",
+  });
+  const [countdownSeconds, setCountdownSeconds] = useState(0);
   const [qrUrl, setQrUrl] = useState("");
   const [descriptor, setDescriptor] = useState("");
   const [debugOpen, setDebugOpen] = useState(false);
@@ -56,6 +92,12 @@ export default function WalletBalance() {
   const [withdrawalPage, setWithdrawalPage] = useState(1);
   const [withdrawalTotal, setWithdrawalTotal] = useState(0);
   const [withdrawalPages, setWithdrawalPages] = useState(1);
+
+  // Transaction history states
+  const [transactions, setTransactions] = useState([]);
+  const [transactionPage, setTransactionPage] = useState(1);
+  const [transactionTotal, setTransactionTotal] = useState(0);
+  const [transactionPages, setTransactionPages] = useState(1);
 
   useEffect(() => {
     const fetchBalance = async () => {
@@ -79,6 +121,36 @@ export default function WalletBalance() {
     }
   }, [user, withdrawalPage]);
 
+  useEffect(() => {
+    fetchTransactions();
+  }, [transactionPage]);
+
+  // Countdown effect cho success modal
+  useEffect(() => {
+    if (successModal.open && countdownSeconds > 0) {
+      const timer = setTimeout(() => {
+        setCountdownSeconds(countdownSeconds - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (countdownSeconds === 0 && successModal.open) {
+      // Auto close khi hết thời gian
+      setSuccessModal({ ...successModal, open: false });
+    }
+  }, [successModal.open, countdownSeconds]);
+
+  const fetchTransactions = async () => {
+    try {
+      const res = await api.get("/wallet/transactions", {
+        params: { page: transactionPage, limit: 10 },
+      });
+      setTransactions(res.data.transactions || []);
+      setTransactionTotal(res.data.total || 0);
+      setTransactionPages(res.data.pages || 1);
+    } catch (e) {
+      console.error("Failed to fetch transactions:", e);
+    }
+  };
+
   const fetchWithdrawalRequests = async () => {
     try {
       const res = await api.get("/wallet/withdrawals", {
@@ -90,6 +162,15 @@ export default function WalletBalance() {
     } catch (e) {
       console.error("Failed to fetch withdrawal requests:", e);
     }
+  };
+
+  const showSuccessModal = (message = "", title = "") => {
+    setSuccessModal({
+      open: true,
+      message: message || "Thành công!",
+      title: title || "✓ Thành công",
+    });
+    setCountdownSeconds(2);
   };
 
   const handleWithdraw = async () => {
@@ -187,6 +268,36 @@ export default function WalletBalance() {
     }
   };
 
+  const getTransactionTypeColor = (type) => {
+    switch (type) {
+      case "deposit":
+        return "success";
+      case "payment":
+        return "error";
+      case "refund":
+        return "info";
+      case "withdrawal":
+        return "warning";
+      default:
+        return "default";
+    }
+  };
+
+  const getTransactionTypeText = (type) => {
+    switch (type) {
+      case "deposit":
+        return "Nạp tiền";
+      case "payment":
+        return "Thanh toán";
+      case "refund":
+        return "Hoàn tiền";
+      case "withdrawal":
+        return "Rút tiền";
+      default:
+        return type;
+    }
+  };
+
   return (
     <Box sx={{ mt: 4 }}>
       <Paper sx={{ p: 3 }}>
@@ -217,6 +328,80 @@ export default function WalletBalance() {
               )}
             </Stack>
           </>
+        )}
+      </Paper>
+
+      {/* Transaction History */}
+      <Paper sx={{ p: 3, mt: 3 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+          <History sx={{ color: "#667eea" }} />
+          <Typography variant="h6" fontWeight="bold">
+            Lịch Sử Giao Dịch
+          </Typography>
+        </Box>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Ngày</TableCell>
+                <TableCell>Loại</TableCell>
+                <TableCell>Số tiền</TableCell>
+                <TableCell>Mô tả</TableCell>
+                <TableCell>Số dư sau</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {transactions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center">
+                    Chưa có giao dịch nào
+                  </TableCell>
+                </TableRow>
+              ) : (
+                transactions.map((tx) => (
+                  <TableRow key={tx.id}>
+                    <TableCell>
+                      {new Date(tx.created_at || tx.createdAt).toLocaleString("vi-VN")}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={getTransactionTypeText(tx.type)}
+                        color={getTransactionTypeColor(tx.type)}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography
+                        sx={{
+                          color:
+                            tx.amount >= 0 ? "success.main" : "error.main",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {tx.amount >= 0 ? "+" : ""}
+                        {Number(tx.amount).toLocaleString("vi-VN")} VND
+                      </Typography>
+                    </TableCell>
+                    <TableCell>{tx.description || "-"}</TableCell>
+                    <TableCell>
+                      {Number(tx.balance_after || 0).toLocaleString("vi-VN")}{" "}
+                      VND
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {transactionPages > 1 && (
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+            <Pagination
+              count={transactionPages}
+              page={transactionPage}
+              onChange={(e, page) => setTransactionPage(page)}
+              color="primary"
+            />
+          </Box>
         )}
       </Paper>
 
@@ -553,11 +738,11 @@ export default function WalletBalance() {
                         amount: amt || undefined,
                       });
                       setBalance(Number(res.data.balance || 0));
-                      setToast({
-                        open: true,
-                        message: res.data.message || "Đã xác nhận nạp tiền",
-                        severity: "success",
-                      });
+                      fetchTransactions(); // Refresh transaction history
+                      showSuccessModal(
+                        res.data.message || "Xác nhận nạp tiền thành công!",
+                        "🎉 Xác nhận thành công"
+                      );
                     } catch (e) {
                       setToast({
                         open: true,
@@ -641,6 +826,114 @@ export default function WalletBalance() {
             Đóng
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Success Modal - Nổi bật hơn */}
+      <Dialog
+        open={successModal.open}
+        onClose={() => {
+          setSuccessModal({ ...successModal, open: false });
+          setCountdownSeconds(0);
+        }}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: "20px",
+            boxShadow: "0 20px 60px rgba(76, 175, 80, 0.3)",
+            background: "linear-gradient(135deg, #E8F5E9 0%, #F1F8E9 100%)",
+            animation: `${popIn} 0.5s ease-out`,
+          },
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "40px 20px",
+            textAlign: "center",
+          }}
+        >
+          {/* Animated Success Icon */}
+          <Box
+            sx={{
+              mb: 2,
+              animation: `${bounce} 0.6s ease-in-out infinite`,
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <CheckCircle
+              sx={{
+                fontSize: "80px",
+                color: "#4CAF50",
+                filter: "drop-shadow(0 4px 12px rgba(76, 175, 80, 0.4))",
+              }}
+            />
+          </Box>
+
+          {/* Title */}
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 700,
+              color: "#2E7D32",
+              mb: 1,
+              fontSize: "24px",
+              letterSpacing: "0.5px",
+            }}
+          >
+            {successModal.title}
+          </Typography>
+
+          {/* Message */}
+          <Typography
+            variant="body1"
+            sx={{
+              color: "#558B2F",
+              mb: 3,
+              fontSize: "16px",
+              lineHeight: "1.6",
+            }}
+          >
+            {successModal.message}
+          </Typography>
+
+          {/* Progress Bar */}
+          <Box
+            sx={{
+              width: "100%",
+              height: "4px",
+              backgroundColor: "#E0E0E0",
+              borderRadius: "2px",
+              overflow: "hidden",
+              mb: 2,
+            }}
+          >
+            <Box
+              sx={{
+                height: "100%",
+                backgroundColor: "#4CAF50",
+                width: `${(countdownSeconds / 2) * 100}%`,
+                transition: "width 0.3s ease",
+              }}
+            />
+          </Box>
+
+          {/* Countdown Text */}
+          <Typography
+            variant="caption"
+            sx={{
+              color: "#81C784",
+              fontSize: "13px",
+              fontWeight: 500,
+            }}
+          >
+            Đóng tự động trong {countdownSeconds} giây
+          </Typography>
+        </Box>
       </Dialog>
 
       <Snackbar

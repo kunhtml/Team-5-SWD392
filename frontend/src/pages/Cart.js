@@ -25,6 +25,8 @@ import {
   Chip,
   Alert,
   Snackbar,
+  Modal,
+  Backdrop,
 } from "@mui/material";
 import {
   Delete,
@@ -35,6 +37,7 @@ import {
   Payment,
   ArrowBack,
   ShoppingCart,
+  CheckCircle,
 } from "@mui/icons-material";
 import api from "../services/api";
 
@@ -49,6 +52,7 @@ const Cart = () => {
     message: "",
     severity: "success",
   });
+  const [orderSuccess, setOrderSuccess] = useState(false);
 
   const handleQuantityChange = (productId, newQuantity) => {
     if (newQuantity > 0 && newQuantity <= 99) {
@@ -95,7 +99,11 @@ const Cart = () => {
       };
 
       const response = await api.post("/orders", orderData);
+      
+      // Show success state
+      setOrderSuccess(true);
       dispatch(clearCart());
+      
       setSnackbar({
         open: true,
         message: "🎉 Đặt hàng thành công!",
@@ -564,6 +572,93 @@ const Cart = () => {
             {snackbar.message}
           </Alert>
         </Snackbar>
+
+        {/* Success Modal */}
+        <Modal
+          open={orderSuccess}
+          onClose={() => setOrderSuccess(false)}
+          closeAfterTransition
+          BackdropComponent={Backdrop}
+          BackdropProps={{
+            timeout: 500,
+            sx: { bgcolor: "rgba(0, 0, 0, 0.8)" },
+          }}
+        >
+          <Fade in={orderSuccess}>
+            <Box
+              sx={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                bgcolor: "white",
+                borderRadius: 4,
+                boxShadow: 24,
+                p: 6,
+                textAlign: "center",
+                minWidth: 400,
+                maxWidth: 500,
+              }}
+            >
+              <Box
+                sx={{
+                  mb: 3,
+                  animation: "bounce 0.6s ease-in-out",
+                  "@keyframes bounce": {
+                    "0%, 100%": { transform: "scale(1)" },
+                    "50%": { transform: "scale(1.2)" },
+                  },
+                }}
+              >
+                <CheckCircle
+                  sx={{
+                    fontSize: 100,
+                    color: "#4caf50",
+                  }}
+                />
+              </Box>
+              <Typography
+                variant="h4"
+                fontWeight="bold"
+                gutterBottom
+                sx={{
+                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
+              >
+                🎉 Đặt hàng thành công!
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                Đơn hàng của bạn đã được xác nhận. 
+                <br />
+                Đang chuyển hướng đến trang đơn hàng...
+              </Typography>
+              <Box
+                sx={{
+                  width: "100%",
+                  height: 4,
+                  bgcolor: "#e0e0e0",
+                  borderRadius: 2,
+                  overflow: "hidden",
+                }}
+              >
+                <Box
+                  sx={{
+                    width: "100%",
+                    height: "100%",
+                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    animation: "progress 2s linear",
+                    "@keyframes progress": {
+                      "0%": { transform: "translateX(-100%)" },
+                      "100%": { transform: "translateX(0)" },
+                    },
+                  }}
+                />
+              </Box>
+            </Box>
+          </Fade>
+        </Modal>
       </Container>
     </Box>
   );
